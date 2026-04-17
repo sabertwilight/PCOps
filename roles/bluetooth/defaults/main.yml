@@ -1,0 +1,5 @@
+---
+# bluetooth role defaults
+bluetooth_packages:
+  - bluez
+  - blueman

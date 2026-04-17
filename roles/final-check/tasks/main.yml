@@ -1,0 +1,52 @@
+---
+# final-check tasks
+# 验证关键包和命令是否安装成功
+
+- name: Gather package facts
+  package_facts:
+    manager: apt
+  tags: always
+
+- name: Check essential packages are installed
+  assert:
+    that:
+      - "'{{ item }}' in ansible_facts.packages"
+    fail_msg: "Package {{ item }} is NOT installed"
+    success_msg: "Package {{ item }} is installed"
+    quiet: true
+  loop: "{{ essential_packages }}"
+  register: package_check
+  ignore_errors: true
+  tags: always
+
+- name: Check essential commands are available
+  command: which {{ item }}
+  register: command_check
+  failed_when: false
+  changed_when: false
+  loop: "{{ essential_commands }}"
+  tags: always
+
+- name: Report missing packages
+  debug:
+    msg: |
+      ⚠️ The following packages are missing:
+      {{ package_check.results | selectattr('failed', 'defined') | selectattr('failed', 'equalto', true) | map(attribute='item') | list | join(', ') }}
+  when: package_check.results | selectattr('failed', 'defined') | selectattr('failed', 'equalto', true) | list | length > 0
+  tags: always
+
+- name: Report missing commands
+  debug:
+    msg: |
+      ⚠️ The following commands are not in PATH:
+      {{ command_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | map(attribute='item') | list | join(', ') }}
+  when: command_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
+  tags: always
+
+- name: Final status - All checks passed
+  debug:
+    msg: "✅ GREAT! All essential packages and commands have been successfully installed."
+  when: >
+    (package_check.results | selectattr('failed', 'defined') | selectattr('failed', 'equalto', true) | list | length == 0) and
+    (command_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length == 0)
+  tags: always

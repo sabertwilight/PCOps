@@ -1,0 +1,58 @@
+---
+# 02-core-packages role defaults
+
+# 核心包列表
+core_packages:
+  - cliphist
+  - grim
+  - gvfs
+  - gvfs-backends
+  - inxi
+  - imagemagick
+  - kitty
+  - nano
+  - pavucontrol
+  - playerctl
+  - polkit-kde-agent-1
+  - python3-requests
+  - python3-pip
+  - qt5ct
+  - qt5-style-kvantum
+  - qt5-style-kvantum-themes
+  - qt6ct
+  - slurp
+  - sway-notification-center
+  - unzip
+  - wget
+  - wl-clipboard
+  - wlogout
+  - xdg-user-dirs
+  - xdg-utils
+  - yad
+
+# 可选但推荐的包
+optional_packages:
+  - brightnessctl
+  - btop
+  - cava
+  - loupe
+  - gnome-system-monitor
+  - mousepad
+  - mpv
+  - mpv-mpris
+  - nvtop
+  - pamixer
+  - qalculate-gtk
+
+# 需要强制重装的包
+force_reinstall_packages:
+  - imagemagick
+  - wayland-protocols
+
+# 需要移除的冲突包
+conflicting_packages:
+  - cargo
+  - dunst
+  - mako
+  - rofi
+  - polkit-gnome  # Ubuntu GNOME 默认的 polkit 代理，与 polkit-kde-agent-1 冲突

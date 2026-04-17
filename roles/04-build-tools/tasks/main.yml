@@ -1,0 +1,211 @@
+---
+# 04-build-tools tasks
+# 从源码编译安装 wallust, swww, rofi-wayland, swappy, nwg-look, nwg-displays
+
+- name: Install build tool dependencies
+  apt:
+    name: "{{ build_tool_dependencies }}"
+    state: present
+  tags: build-tools
+
+# ===========================================
+# wallust (cargo)
+# ===========================================
+- name: Clone wallust repository
+  git:
+    repo: "{{ wallust_repo }}"
+    dest: "{{ cache_dir }}/git/wallust"
+    version: "{{ wallust_version }}"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: [build-tools, wallust]
+
+- name: Check if wallust is installed
+  stat:
+    path: "{{ target_user_home }}/.cargo/bin/wallust"
+  register: wallust_installed
+  become: false
+  tags: [build-tools, wallust]
+
+- name: Build and install wallust
+  shell: |
+    source {{ target_user_home }}/.cargo/env
+    cd {{ cache_dir }}/git/wallust
+    cargo build --release
+    cargo install --path . --force
+  args:
+    executable: /bin/bash
+  environment: "{{ proxy_env }}"
+  when: not wallust_installed.stat.exists
+  become: false
+  tags: [build-tools, wallust]
+
+# ===========================================
+# swww (cargo)
+# ===========================================
+- name: Clone swww repository
+  git:
+    repo: "{{ swww_repo }}"
+    dest: "{{ cache_dir }}/git/swww"
+    version: "{{ swww_version }}"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: [build-tools, swww]
+
+- name: Check if swww is installed
+  stat:
+    path: "{{ target_user_home }}/.cargo/bin/swww"
+  register: swww_installed
+  become: false
+  tags: [build-tools, swww]
+
+- name: Build and install swww
+  shell: |
+    source {{ target_user_home }}/.cargo/env
+    cd {{ cache_dir }}/git/swww
+    cargo build --release
+    cargo install --path . --force
+  args:
+    executable: /bin/bash
+  environment: "{{ proxy_env }}"
+  when: not swww_installed.stat.exists
+  become: false
+  tags: [build-tools, swww]
+
+# ===========================================
+# rofi-wayland (meson)
+# ===========================================
+- name: Check if rofi is installed
+  stat:
+    path: /usr/local/bin/rofi
+  register: rofi_installed
+  tags: [build-tools, rofi]
+
+- name: Download rofi-wayland source
+  get_url:
+    url: "https://github.com/lbonn/rofi/releases/download/{{ rofi_wayland_version }}/rofi-{{ rofi_wayland_version }}.tar.xz"
+    dest: "{{ cache_dir }}/archives/rofi-{{ rofi_wayland_version }}.tar.xz"
+    mode: '0644'
+  environment: "{{ proxy_env }}"
+  when: use_cache and not rofi_installed.stat.exists
+  tags: [build-tools, rofi]
+
+- name: Extract rofi-wayland source
+  unarchive:
+    src: "{{ cache_dir }}/archives/rofi-{{ rofi_wayland_version }}.tar.xz"
+    dest: "{{ build_dir }}"
+    remote_src: true
+  when: not rofi_installed.stat.exists
+  tags: [build-tools, rofi]
+
+- name: Build and install rofi-wayland
+  shell: |
+    cd {{ build_dir }}/rofi-{{ rofi_wayland_version }}
+    meson setup build --prefix=/usr/local
+    ninja -C build
+    ninja -C build install
+  args:
+    creates: /usr/local/bin/rofi
+  when: not rofi_installed.stat.exists
+  tags: [build-tools, rofi]
+
+# ===========================================
+# swappy (meson)
+# ===========================================
+- name: Clone swappy repository
+  git:
+    repo: "{{ swappy_repo }}"
+    dest: "{{ cache_dir }}/git/swappy"
+    version: "{{ swappy_version }}"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: [build-tools, swappy]
+
+- name: Check if swappy is installed
+  stat:
+    path: /usr/local/bin/swappy
+  register: swappy_installed
+  tags: [build-tools, swappy]
+
+- name: Build and install swappy
+  shell: |
+    cd {{ cache_dir }}/git/swappy
+    meson setup build --prefix=/usr/local
+    ninja -C build
+    ninja -C build install
+  args:
+    creates: /usr/local/bin/swappy
+  when: not swappy_installed.stat.exists
+  tags: [build-tools, swappy]
+
+# ===========================================
+# nwg-look (make)
+# ===========================================
+- name: Clone nwg-look repository
+  git:
+    repo: "{{ nwg_look_repo }}"
+    dest: "{{ cache_dir }}/git/nwg-look"
+    version: "{{ nwg_look_version }}"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  when: install_nwg_look
+  tags: [build-tools, nwg-look]
+
+- name: Check if nwg-look is installed
+  stat:
+    path: /usr/local/bin/nwg-look
+  register: nwg_look_installed
+  when: install_nwg_look
+  tags: [build-tools, nwg-look]
+
+- name: Build and install nwg-look
+  shell: |
+    source {{ target_user_home }}/.cargo/env
+    cd {{ cache_dir }}/git/nwg-look
+    make
+    make install
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/nwg-look
+  environment: "{{ proxy_env }}"
+  when:
+    - install_nwg_look
+    - not nwg_look_installed.stat.exists
+  tags: [build-tools, nwg-look]
+
+# ===========================================
+# nwg-displays (shell installer)
+# ===========================================
+- name: Clone nwg-displays repository
+  git:
+    repo: "{{ nwg_displays_repo }}"
+    dest: "{{ cache_dir }}/git/nwg-displays"
+    version: "{{ nwg_displays_version }}"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: [build-tools, nwg-displays]
+
+- name: Check if nwg-displays is installed
+  stat:
+    path: /usr/local/bin/nwg-displays
+  register: nwg_displays_installed
+  tags: [build-tools, nwg-displays]
+
+- name: Install nwg-displays
+  shell: |
+    cd {{ cache_dir }}/git/nwg-displays
+    ./install.sh
+  args:
+    creates: /usr/local/bin/nwg-displays
+  when: not nwg_displays_installed.stat.exists
+  tags: [build-tools, nwg-displays]

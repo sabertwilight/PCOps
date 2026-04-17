@@ -1,0 +1,37 @@
+---
+# 04-build-tools role defaults
+# 从源码编译的工具配置
+
+# wallust - 颜色方案生成器 (Rust/cargo)
+wallust_repo: "https://codeberg.org/explosion-mental/wallust"
+wallust_version: "v3.2.0"
+
+# swww - 壁纸工具 (Rust/cargo)
+swww_repo: "https://github.com/Horus645/swww"
+swww_version: "v0.11.2"
+
+# rofi-wayland (meson)
+rofi_wayland_repo: "https://github.com/lbonn/rofi"
+rofi_wayland_version: "1.7.8+wayland1"
+
+# swappy - 截图编辑 (meson)
+swappy_repo: "https://github.com/jtheoof/swappy"
+swappy_version: "v1.5.1"
+
+# nwg-look - GTK 主题工具 (make)
+nwg_look_repo: "https://github.com/nwg-piotr/nwg-look"
+nwg_look_version: "v0.2.7"
+
+# nwg-displays - 显示配置 (shell installer)
+nwg_displays_repo: "https://github.com/nwg-piotr/nwg-displays"
+nwg_displays_version: "v0.3.22"
+
+# 构建工具依赖
+build_tool_dependencies:
+  - libcairo2-dev
+  - libgdk-pixbuf-2.0-dev
+  - libgtk-3-dev
+  - libpango1.0-dev
+  - libwayland-dev
+  - libxkbcommon-dev
+  - scdoc

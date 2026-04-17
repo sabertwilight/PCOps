@@ -1,0 +1,7 @@
+---
+# gtk-themes role defaults
+gtk_theme_packages:
+  - unzip
+  - gtk2-engines-murrine
+
+gtk_themes_repo: "https://github.com/JaKooLit/GTK-themes-icons"

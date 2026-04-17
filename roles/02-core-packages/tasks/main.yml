@@ -1,0 +1,38 @@
+---
+# 02-core-packages tasks
+# 安装核心 Hyprland 包，移除冲突包
+
+- name: Remove conflicting packages
+  apt:
+    name: "{{ conflicting_packages }}"
+    state: absent
+    purge: true
+  tags: packages
+
+- name: Install core packages
+  apt:
+    name: "{{ core_packages }}"
+    state: present
+  tags: packages
+
+- name: Install optional packages
+  apt:
+    name: "{{ optional_packages }}"
+    state: present
+  tags: packages
+
+- name: Force reinstall specific packages
+  apt:
+    name: "{{ force_reinstall_packages }}"
+    state: latest
+    force: true
+  tags: packages
+
+- name: Make brightnessctl work without sudo
+  file:
+    path: "{{ item }}"
+    mode: 'u+s'
+  loop:
+    - /usr/bin/brightnessctl
+  failed_when: false
+  tags: packages

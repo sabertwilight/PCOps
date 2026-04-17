@@ -1,0 +1,89 @@
+---
+# sddm tasks
+# 安装 SDDM 登录管理器和可选主题
+
+- name: Install SDDM (no-recommends)
+  apt:
+    name: "{{ sddm_packages }}"
+    state: present
+    install_recommends: false
+  tags: sddm
+
+- name: Install SDDM extra packages
+  apt:
+    name: "{{ sddm_extra_packages }}"
+    state: present
+  tags: sddm
+
+- name: Disable other login managers
+  systemd:
+    name: "{{ item }}.service"
+    enabled: false
+    state: stopped
+  loop: "{{ login_managers_to_disable }}"
+  failed_when: false
+  tags: sddm
+
+- name: Enable SDDM service
+  systemd:
+    name: sddm
+    enabled: true
+  tags: sddm
+
+- name: Ensure wayland-sessions directory exists
+  file:
+    path: /usr/share/wayland-sessions
+    state: directory
+    mode: '0755'
+  tags: sddm
+
+- name: Copy Hyprland desktop entry
+  copy:
+    src: assets/hyprland.desktop
+    dest: /usr/share/wayland-sessions/hyprland.desktop
+    mode: '0644'
+  tags: sddm
+
+# SDDM 主题安装
+- name: Install SDDM theme
+  when: install_sddm_theme
+  block:
+    - name: Ensure SDDM themes directory exists
+      file:
+        path: /usr/share/sddm/themes
+        state: directory
+        mode: '0755'
+      tags: sddm
+
+    - name: Remove existing theme directory
+      file:
+        path: "/usr/share/sddm/themes/{{ sddm_theme_name }}"
+        state: absent
+      tags: sddm
+
+    - name: Clone SDDM theme
+      git:
+        repo: "{{ sddm_theme_repo }}"
+        dest: "/tmp/{{ sddm_theme_name }}"
+        depth: 1
+      tags: sddm
+
+    - name: Move theme to SDDM themes directory
+      command: mv /tmp/{{ sddm_theme_name }} /usr/share/sddm/themes/
+      tags: sddm
+
+    - name: Ensure SDDM config directory exists
+      file:
+        path: /etc/sddm.conf.d
+        state: directory
+        mode: '0755'
+      tags: sddm
+
+    - name: Configure SDDM theme
+      copy:
+        content: |
+          [Theme]
+          Current={{ sddm_theme_name }}
+        dest: /etc/sddm.conf.d/theme.conf.user
+        mode: '0644'
+      tags: sddm

@@ -1,0 +1,23 @@
+---
+# sddm role defaults
+sddm_packages:
+  - sddm
+
+sddm_extra_packages:
+  - qml-module-qtgraphicaleffects
+  - qml-module-qtquick-controls
+  - qml-module-qtquick-controls2
+  - qml-module-qtquick-extras
+  - qml-module-qtquick-layouts
+
+# 需要禁用的登录管理器
+login_managers_to_disable:
+  - lightdm
+  - gdm3
+  - gdm
+  - lxdm
+  - lxdm-gtk3
+
+# SDDM 主题配置
+sddm_theme_name: "simple-sddm"
+sddm_theme_repo: "https://github.com/JaKooLit/simple-sddm"

@@ -1,0 +1,103 @@
+---
+# Hyprland Installation Configuration
+# 替代原 preset.sh
+
+# ===========================================
+# 核心配置
+# ===========================================
+hyprland_install: true
+hyprland_ppa: "ppa:cppiber/hyprland"
+
+# ===========================================
+# 可选组件开关
+# ===========================================
+install_nvidia: false              # NVIDIA GPU 配置 (可自动检测)
+install_gtk_themes: true           # GTK 主题和图标
+install_bluetooth: true            # 蓝牙配置
+install_thunar: true               # Thunar 文件管理器
+install_thunar_default: true       # 设为默认文件管理器
+install_ags: true                  # AGS 桌面概览
+install_sddm: true                 # SDDM 登录管理器
+install_sddm_theme: true           # SDDM 主题
+install_zsh: true                  # Zsh + Oh-My-Zsh
+install_pokemon_scripts: true      # Pokemon 彩色脚本
+install_nwg_look: true             # nwg-look GTK 主题工具
+install_rog: false                 # ASUS ROG 笔记本工具
+install_dotfiles: true             # KooL Hyprland dotfiles
+add_user_to_input_group: true      # 添加用户到 input 组
+
+# ===========================================
+# 版本标签 (可覆盖)
+# ===========================================
+ags_version: "v1.9.0"
+swww_version: "v0.11.2"
+rofi_wayland_version: "1.7.8+wayland1"
+nwg_look_version: "v0.2.7"
+nwg_displays_version: "v0.3.22"
+swappy_version: "v1.5.1"
+wallust_version: "v3.2.0"
+
+# ===========================================
+# 用户配置
+# ===========================================
+# target_user 和 target_user_home 在运行时自动设置
+# target_user: "{{ ansible_user_id }}"
+# target_user_home: "{{ ansible_env.HOME }}"
+
+# ===========================================
+# 构建和缓存配置
+# ===========================================
+build_dir: "/tmp/hyprland-build"
+
+# 离线/缓存安装支持
+offline_mode: false                          # 启用离线模式 (只使用缓存)
+cache_dir: "{{ ansible_env.HOME }}/.cache/hyprland-ansible"
+use_cache: true                              # 优先使用缓存
+save_to_cache: true                          # 下载时保存到缓存
+
+# ===========================================
+# Git 仓库 URL
+# ===========================================
+hyprland_dots_repo: "https://github.com/JaKooLit/Hyprland-Dots.git"
+hyprland_dots_branch: "main"
+gtk_themes_repo: "https://github.com/JaKooLit/GTK-themes-icons"
+sddm_theme_repo: "https://github.com/JaKooLit/simple-sddm"
+pokemon_repo: "https://github.com/phobicdawg/pokemon-colorscripts.git"
+ags_repo: "https://github.com/Aylur/ags"
+swww_repo: "https://github.com/Horus645/swww"
+rofi_wayland_repo: "https://github.com/lbonn/rofi"
+swappy_repo: "https://github.com/jtheoof/swappy"
+wallust_repo: "https://codeberg.org/explosion-mental/wallust"
+nwg_look_repo: "https://github.com/nwg-piotr/nwg-look"
+nwg_displays_repo: "https://github.com/nwg-piotr/nwg-displays"
+rog_asusctl_repo: "https://gitlab.com/asus-linux/asusctl.git"
+rog_supergfxctl_repo: "https://gitlab.com/asus-linux/supergfxctl.git"
+
+# ===========================================
+# 字体下载 URL
+# ===========================================
+jetbrains_mono_url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/JetBrainsMono.tar.xz"
+victor_mono_url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/VictorMono.zip"
+fantasque_sans_mono_url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/FantasqueSansMono.zip"
+
+# ===========================================
+# 检测结果 (运行时设置)
+# ===========================================
+nvidia_detected: false
+login_manager_detected: false
+
+# ===========================================
+# 代理配置 (中国大陆用户需要配置)
+# ===========================================
+# 启用代理配置
+configure_proxy: false
+
+# apt 代理配置 (会写入 /etc/apt/apt.conf.d/95proxies)
+apt_proxy_http: ""
+apt_proxy_https: ""
+
+# 环境变量代理 (用于 git, curl, npm, cargo 等)
+# 留空则自动从环境变量读取
+proxy_http: ""
+proxy_https: ""
+proxy_all: ""

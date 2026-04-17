@@ -1,0 +1,16 @@
+---
+# bluetooth tasks
+# 安装和配置蓝牙
+
+- name: Install Bluetooth packages
+  apt:
+    name: "{{ bluetooth_packages }}"
+    state: present
+  tags: bluetooth
+
+- name: Enable Bluetooth service
+  systemd:
+    name: bluetooth
+    enabled: true
+    state: started
+  tags: bluetooth

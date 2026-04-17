@@ -1,0 +1,68 @@
+---
+# 03-fonts tasks
+# 安装字体 (apt + 下载 Nerd 字体)
+
+- name: Install font packages via apt
+  apt:
+    name: "{{ font_packages }}"
+    state: present
+  tags: fonts
+
+- name: Ensure font directories exist
+  file:
+    path: "{{ item.dest }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ nerd_fonts }}"
+  become: false
+  tags: fonts
+
+- name: Ensure cache directory for fonts exists
+  file:
+    path: "{{ cache_dir }}/fonts"
+    state: directory
+    mode: '0755'
+  when: use_cache
+  tags: fonts
+
+- name: Download and extract Nerd fonts
+  block:
+    - name: Check if font is already installed
+      stat:
+        path: "{{ item.dest }}"
+      register: font_dir_stat
+      loop: "{{ nerd_fonts }}"
+      become: false
+
+    - name: Download font to cache
+      get_url:
+        url: "{{ item.item.url }}"
+        dest: "{{ cache_dir }}/fonts/{{ item.item.filename }}"
+        mode: '0644'
+      environment: "{{ proxy_env }}"
+      when:
+        - use_cache
+        - not font_dir_stat.results[index].stat.exists or not offline_mode
+      loop: "{{ nerd_fonts }}"
+      loop_control:
+        index_var: index
+      become: false
+      register: font_downloads
+
+    - name: Extract font archives
+      unarchive:
+        src: "{{ cache_dir }}/fonts/{{ item.filename }}"
+        dest: "{{ item.dest }}"
+        remote_src: true
+      when: >
+        use_cache and
+        not font_dir_stat.results[nerd_fonts.index(item)].stat.exists
+      loop: "{{ nerd_fonts }}"
+      become: false
+  tags: fonts
+
+- name: Update font cache
+  command: fc-cache -fv
+  changed_when: true
+  become: false
+  tags: fonts

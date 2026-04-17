@@ -1,0 +1,16 @@
+---
+# nvidia role defaults
+nvidia_packages:
+  - libva-wayland2
+  - libnvidia-egl-wayland1
+  - nvidia-vaapi-driver
+
+# GRUB 内核参数
+nvidia_kernel_params: "rd.driver.blacklist=nouveau modprobe.blacklist=nouveau nvidia-drm.modeset=1 rcutree.rcu_idle_gp_delay=1"
+
+# NVIDIA 模块
+nvidia_modules:
+  - nvidia
+  - nvidia_modeset
+  - nvidia_uvm
+  - nvidia_drm

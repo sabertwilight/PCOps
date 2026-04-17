@@ -1,0 +1,19 @@
+---
+# final-check role defaults
+essential_packages:
+  - imagemagick
+  - sway-notification-center
+  - waybar
+  - wl-clipboard
+  - cliphist
+  - wlogout
+  - kitty
+
+essential_commands:
+  - hyprland
+  - hypridle
+  - hyprlock
+  - swww
+  - rofi
+  - wallust
+  - nwg-displays

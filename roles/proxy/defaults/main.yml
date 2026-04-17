@@ -1,0 +1,16 @@
+---
+# proxy role defaults
+# 代理配置默认值
+
+# 是否启用代理配置
+configure_proxy: false
+
+# apt 代理配置 (会写入 /etc/apt/apt.conf.d/95proxies)
+apt_proxy_http: ""
+apt_proxy_https: ""
+
+# 环境变量代理 (用于 git, curl, npm, cargo 等)
+# 留空则自动从环境变量读取
+proxy_http: ""
+proxy_https: ""
+proxy_all: ""

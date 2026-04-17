@@ -1,0 +1,11 @@
+---
+# 01-hyprland-ppa role defaults
+hyprland_ppa_packages:
+  - hyprland
+  - hypridle
+  - hyprlock
+  - hyprsunset
+  - hyprpicker
+  - waybar
+  - hyprwayland-scanner
+  - xdg-desktop-portal-hyprland

@@ -1,0 +1,36 @@
+---
+# 01-hyprland-ppa tasks
+# 添加 Hyprland PPA 并安装 Hyprland 核心包
+
+- name: Ensure software-properties-common is installed
+  apt:
+    name: software-properties-common
+    state: present
+  tags: hyprland
+
+- name: Add Hyprland PPA
+  apt_repository:
+    repo: "{{ hyprland_ppa }}"
+    state: present
+    update_cache: true
+  tags: hyprland
+
+- name: Install Hyprland from PPA
+  apt:
+    name: "{{ hyprland_ppa_packages }}"
+    state: present
+  tags: hyprland
+
+- name: Ensure wayland-sessions directory exists
+  file:
+    path: /usr/share/wayland-sessions
+    state: directory
+    mode: '0755'
+  tags: hyprland
+
+- name: Copy Hyprland desktop entry
+  copy:
+    src: assets/hyprland.desktop
+    dest: /usr/share/wayland-sessions/hyprland.desktop
+    mode: '0644'
+  tags: hyprland

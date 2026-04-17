@@ -1,0 +1,15 @@
+---
+# thunar role defaults
+thunar_packages:
+  - ffmpegthumbnailer
+  - thunar
+  - thunar-volman
+  - tumbler
+  - thunar-archive-plugin
+  - xarchiver
+
+# 需要复制的配置目录
+thunar_config_dirs:
+  - gtk-3.0
+  - Thunar
+  - xfce4

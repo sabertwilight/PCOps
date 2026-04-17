@@ -1,0 +1,82 @@
+---
+# rog tasks
+# 安装 ASUS ROG 笔记本工具 (asusctl, supergfxctl)
+
+- name: Install ROG packages
+  apt:
+    name: "{{ rog_packages }}"
+    state: present
+  tags: rog
+
+- name: Enable power-profiles-daemon
+  systemd:
+    name: power-profiles-daemon
+    enabled: true
+  tags: rog
+
+# asusctl
+- name: Clone asusctl repository
+  git:
+    repo: "{{ asusctl_repo }}"
+    dest: "{{ cache_dir }}/git/asusctl"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: [rog, asusctl]
+
+- name: Check if asusctl is installed
+  stat:
+    path: /usr/local/bin/asusctl
+  register: asusctl_installed
+  tags: [rog, asusctl]
+
+- name: Build and install asusctl
+  shell: |
+    source {{ target_user_home }}/.cargo/env
+    cd {{ cache_dir }}/git/asusctl
+    make
+    make install
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/asusctl
+  environment: "{{ proxy_env }}"
+  when: not asusctl_installed.stat.exists
+  tags: [rog, asusctl]
+
+# supergfxctl
+- name: Clone supergfxctl repository
+  git:
+    repo: "{{ supergfxctl_repo }}"
+    dest: "{{ cache_dir }}/git/supergfxctl"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: [rog, supergfxctl]
+
+- name: Check if supergfxctl is installed
+  stat:
+    path: /usr/local/bin/supergfxctl
+  register: supergfxctl_installed
+  tags: [rog, supergfxctl]
+
+- name: Build and install supergfxctl
+  shell: |
+    source {{ target_user_home }}/.cargo/env
+    cd {{ cache_dir }}/git/supergfxctl
+    make
+    make install
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/supergfxctl
+  environment: "{{ proxy_env }}"
+  when: not supergfxctl_installed.stat.exists
+  tags: [rog, supergfxctl]
+
+- name: Enable supergfxd service
+  systemd:
+    name: supergfxd
+    enabled: true
+    state: started
+  tags: [rog, supergfxctl]

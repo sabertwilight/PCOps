@@ -1,0 +1,31 @@
+---
+# dotfiles tasks
+# 克隆并部署 KooL Hyprland dotfiles
+
+- name: Clone Hyprland-Dots repository
+  git:
+    repo: "{{ hyprland_dots_repo }}"
+    dest: "{{ cache_dir }}/git/Hyprland-Dots"
+    version: "{{ hyprland_dots_branch }}"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: dotfiles
+
+- name: Check if dotfiles copy script exists
+  stat:
+    path: "{{ cache_dir }}/git/Hyprland-Dots/copy.sh"
+  register: copy_script
+  tags: dotfiles
+
+- name: Run dotfiles copy script
+  shell: |
+    cd {{ cache_dir }}/git/Hyprland-Dots
+    chmod +x copy.sh
+    ./copy.sh
+  args:
+    executable: /bin/bash
+  when: copy_script.stat.exists
+  become: false
+  tags: dotfiles

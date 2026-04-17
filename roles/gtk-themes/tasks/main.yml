@@ -1,0 +1,29 @@
+---
+# gtk-themes tasks
+# 安装 GTK 主题和图标
+
+- name: Install GTK theme dependencies
+  apt:
+    name: "{{ gtk_theme_packages }}"
+    state: present
+  tags: gtk
+
+- name: Clone GTK themes repository
+  git:
+    repo: "{{ gtk_themes_repo }}"
+    dest: "{{ cache_dir }}/git/GTK-themes-icons"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: gtk
+
+- name: Extract GTK themes and icons
+  shell: |
+    cd {{ cache_dir }}/git/GTK-themes-icons
+    chmod +x auto-extract.sh
+    ./auto-extract.sh
+  args:
+    creates: "{{ target_user_home }}/.themes/Andromeda-dark"
+  become: false
+  tags: gtk

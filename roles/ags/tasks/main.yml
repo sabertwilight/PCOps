@@ -1,0 +1,85 @@
+---
+# ags tasks
+# 安装 AGS (Aylur's GTK Shell) v1
+
+- name: Install AGS dependencies
+  apt:
+    name: "{{ ags_packages }}"
+    state: present
+  tags: ags
+
+- name: Install build dependencies for pam
+  apt:
+    name: pam
+    state: build-dep
+  tags: ags
+
+- name: Install TypeScript globally
+  npm:
+    name: typescript
+    global: true
+    state: present
+  environment: "{{ proxy_env }}"
+  tags: ags
+
+- name: Check if AGS is already installed
+  stat:
+    path: /usr/local/bin/ags
+  register: ags_installed
+  tags: ags
+
+- name: Clone AGS repository
+  git:
+    repo: "{{ ags_repo }}"
+    dest: "{{ cache_dir }}/git/ags"
+    depth: 1
+    force: true
+  environment: "{{ proxy_env }}"
+  when: not ags_installed.stat.exists
+  become: false
+  tags: ags
+
+- name: Build and install AGS
+  block:
+    - name: Run npm install
+      command: npm install
+      args:
+        chdir: "{{ cache_dir }}/git/ags"
+      environment: "{{ proxy_env }}"
+      become: false
+
+    - name: Setup meson build
+      command: meson setup build
+      args:
+        chdir: "{{ cache_dir }}/git/ags"
+        creates: "{{ cache_dir }}/git/ags/build"
+
+    - name: Install AGS with meson
+      command: meson install -C build
+      args:
+        chdir: "{{ cache_dir }}/git/ags"
+  when: not ags_installed.stat.exists
+  tags: ags
+
+- name: Create AGS wrapper script
+  copy:
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd "$HOME" 2>/dev/null || true
+      # Locate AGS ESM entry
+      MAIN_JS="/usr/local/share/com.github.Aylur.ags/com.github.Aylur.ags"
+      if [ ! -f "$MAIN_JS" ]; then
+        MAIN_JS="/usr/share/com.github.Aylur.ags/com.github.Aylur.ags"
+      fi
+      if [ ! -f "$MAIN_JS" ]; then
+        echo "Unable to find AGS entry script (com.github.Aylur.ags) in /usr/local/share or /usr/share" >&2
+        exit 1
+      fi
+      # Ensure GI typelibs and native libs are discoverable before gjs ESM loads
+      export GI_TYPELIB_PATH="/usr/local/lib/x86_64-linux-gnu:/usr/local/lib64:/usr/local/lib:/usr/local/lib64/girepository-1.0:/usr/local/lib/girepository-1.0:/usr/local/lib/x86_64-linux-gnu/girepository-1.0:/usr/lib/x86_64-linux-gnu/girepository-1.0:/usr/lib/girepository-1.0:/usr/lib64/girepository-1.0:/usr/lib/ags:/usr/local/lib/ags:/usr/lib64/ags:${GI_TYPELIB_PATH-}"
+      export LD_LIBRARY_PATH="/usr/local/lib/x86_64-linux-gnu:/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH-}"
+      exec /usr/bin/gjs -m "$MAIN_JS" "$@"
+    dest: /usr/local/bin/ags
+    mode: '0755'
+  tags: ags

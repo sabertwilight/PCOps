@@ -1,0 +1,51 @@
+---
+# nvidia tasks
+# NVIDIA 驱动和配置
+
+- name: Install NVIDIA drivers using ubuntu-drivers
+  command: ubuntu-drivers install
+  register: nvidia_driver_install
+  changed_when: "'nvidia' in nvidia_driver_install.stdout | default('')"
+  tags: nvidia
+
+- name: Install additional NVIDIA packages
+  apt:
+    name: "{{ nvidia_packages }}"
+    state: present
+  tags: nvidia
+
+- name: Add NVIDIA kernel parameters to GRUB
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX="'
+    line: 'GRUB_CMDLINE_LINUX="{{ nvidia_kernel_params }} "'
+    backrefs: true
+  register: grub_modified
+  tags: nvidia
+
+- name: Update GRUB
+  command: update-grub
+  when: grub_modified.changed
+  tags: nvidia
+
+- name: Create NVIDIA modprobe config
+  copy:
+    content: |
+      options nvidia-drm modeset=1 fbdev=1
+      options nvidia NVreg_PreserveVideoMemoryAllocations=1
+    dest: /etc/modprobe.d/nvidia.conf
+    mode: '0644'
+  tags: nvidia
+
+- name: Add NVIDIA modules to initramfs
+  lineinfile:
+    path: /etc/initramfs-tools/modules
+    line: "{{ nvidia_modules | join(' ') }}"
+    state: present
+  register: initramfs_modified
+  tags: nvidia
+
+- name: Update initramfs
+  command: update-initramfs -u
+  when: initramfs_modified.changed
+  tags: nvidia

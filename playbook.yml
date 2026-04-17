@@ -1,0 +1,136 @@
+---
+# KooL's Ubuntu 24.04 Hyprland Installation Playbook
+# https://github.com/JaKooLit/Ubuntu-Hyprland
+#
+# 用法:
+#   ansible-playbook playbook.yml -K                    # 完整安装
+#   ansible-playbook playbook.yml -K --tags "core"      # 只安装核心组件
+#   ansible-playbook playbook.yml -K --tags "nvidia"    # 只安装 NVIDIA 配置
+#   ansible-playbook playbook.yml -K -e "@my-config.yml" # 使用自定义配置
+
+- name: Install Hyprland on Ubuntu 24.04
+  hosts: localhost
+  become: true
+  gather_facts: true
+
+  vars:
+    # 运行时设置用户信息
+    target_user: "{{ ansible_user_id }}"
+    target_user_home: "{{ ansible_env.HOME }}"
+
+  pre_tasks:
+    - name: Set target user facts
+      set_fact:
+        target_user: "{{ ansible_user_id }}"
+        target_user_home: "{{ ansible_env.HOME }}"
+      tags: always
+
+    - name: Detect NVIDIA GPU
+      shell: lspci | grep -i nvidia
+      register: nvidia_check
+      failed_when: false
+      changed_when: false
+      tags: always
+
+    - name: Set NVIDIA detected fact
+      set_fact:
+        nvidia_detected: "{{ nvidia_check.rc == 0 }}"
+      tags: always
+
+    - name: Detect active login managers
+      shell: systemctl is-active gdm gdm3 lightdm lxdm 2>/dev/null || true
+      register: login_manager_check
+      changed_when: false
+      tags: always
+
+    - name: Set login manager detected fact
+      set_fact:
+        login_manager_detected: "{{ login_manager_check.stdout | length > 0 }}"
+      tags: always
+
+    - name: Display detection results
+      debug:
+        msg: |
+          Target User: {{ target_user }}
+          NVIDIA Detected: {{ nvidia_detected }}
+          Login Manager Detected: {{ login_manager_detected }}
+      tags: always
+
+  roles:
+    # Phase 0: 代理配置 (中国大陆用户)
+    - role: proxy
+      tags: [proxy, always]
+
+    # Phase 1: 系统检查和依赖
+    - role: 00-prerequisites
+      tags: [prerequisites, core]
+
+    # Phase 2: Hyprland PPA 和核心包
+    - role: 01-hyprland-ppa
+      tags: [hyprland, ppa, core]
+
+    - role: 02-core-packages
+      tags: [packages, core]
+
+    - role: 03-fonts
+      tags: [fonts, core]
+
+    # Phase 3: 从源码构建的工具
+    - role: 04-build-tools
+      tags: [build-tools, core]
+
+    # Phase 4: 可选组件
+    - role: sddm
+      when: install_sddm and not login_manager_detected
+      tags: [sddm, optional]
+
+    - role: nvidia
+      when: install_nvidia or nvidia_detected
+      tags: [nvidia, optional]
+
+    - role: gtk-themes
+      when: install_gtk_themes
+      tags: [gtk, themes, optional]
+
+    - role: bluetooth
+      when: install_bluetooth
+      tags: [bluetooth, optional]
+
+    - role: thunar
+      when: install_thunar
+      tags: [thunar, optional]
+
+    - role: zsh
+      when: install_zsh
+      tags: [zsh, optional]
+
+    - role: ags
+      when: install_ags
+      tags: [ags, optional]
+
+    - role: rog
+      when: install_rog
+      tags: [rog, optional]
+
+    - role: dotfiles
+      when: install_dotfiles
+      tags: [dotfiles, optional]
+
+    # Phase 5: 最终验证
+    - role: final-check
+      tags: [verify, always]
+
+  post_tasks:
+    - name: Installation complete
+      debug:
+        msg: |
+          ✅ Hyprland installation complete!
+
+          To start Hyprland:
+            - If SDDM is installed: Select "Hyprland" at login
+            - Otherwise: Run 'Hyprland' (capital H) from TTY
+
+          📝 Recommended: Reboot your system now.
+
+          📚 Documentation: https://github.com/JaKooLit/Hyprland-Dots/wiki
+      tags: always

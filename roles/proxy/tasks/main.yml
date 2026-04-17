@@ -1,0 +1,125 @@
+---
+# proxy role tasks
+# 配置代理环境变量和 apt 代理
+
+- name: Detect proxy from environment variables
+  set_fact:
+    detected_http_proxy: "{{ lookup('env', 'HTTP_PROXY') | default(lookup('env', 'http_proxy'), true) | default('', true) }}"
+    detected_https_proxy: "{{ lookup('env', 'HTTPS_PROXY') | default(lookup('env', 'https_proxy'), true) | default('', true) }}"
+    detected_all_proxy: "{{ lookup('env', 'ALL_PROXY') | default(lookup('env', 'all_proxy'), true) | default('', true) }}"
+  tags: always
+
+- name: Set proxy facts from config or environment
+  set_fact:
+    final_http_proxy: "{{ proxy_http if proxy_http else detected_http_proxy }}"
+    final_https_proxy: "{{ proxy_https if proxy_https else detected_https_proxy }}"
+    final_all_proxy: "{{ proxy_all if proxy_all else detected_all_proxy }}"
+  tags: always
+
+- name: Display proxy configuration
+  debug:
+    msg: |
+      Proxy Configuration:
+        HTTP_PROXY: {{ final_http_proxy | default('(not set)', true) }}
+        HTTPS_PROXY: {{ final_https_proxy | default('(not set)', true) }}
+        ALL_PROXY: {{ final_all_proxy | default('(not set)', true) }}
+  tags: always
+
+# ===========================================
+# apt 代理配置
+# ===========================================
+- name: Configure apt proxy
+  when: configure_proxy and (apt_proxy_http or apt_proxy_https)
+  block:
+    - name: Create apt proxy configuration file
+      copy:
+        content: |
+          {% if apt_proxy_http %}
+          Acquire::http::Proxy "{{ apt_proxy_http }}";
+          {% endif %}
+          {% if apt_proxy_https %}
+          Acquire::https::Proxy "{{ apt_proxy_https }}";
+          {% endif %}
+        dest: /etc/apt/apt.conf.d/95proxies
+        mode: '0644'
+      tags: proxy
+
+    - name: Update apt cache with proxy
+      apt:
+        update_cache: true
+      tags: proxy
+
+- name: Remove apt proxy configuration
+  when: not configure_proxy
+  file:
+    path: /etc/apt/apt.conf.d/95proxies
+    state: absent
+  tags: proxy
+
+# ===========================================
+# Git 代理配置
+# ===========================================
+- name: Configure git proxy
+  when: configure_proxy and final_http_proxy
+  block:
+    - name: Set git http proxy
+      git_config:
+        name: http.proxy
+        scope: global
+        value: "{{ final_http_proxy }}"
+      become: false
+      tags: proxy
+
+    - name: Set git https proxy
+      git_config:
+        name: https.proxy
+        scope: global
+        value: "{{ final_https_proxy | default(final_http_proxy, true) }}"
+      become: false
+      tags: proxy
+
+- name: Remove git proxy configuration
+  when: not configure_proxy
+  block:
+    - name: Unset git http proxy
+      git_config:
+        name: http.proxy
+        scope: global
+        state: absent
+      become: false
+      failed_when: false
+      tags: proxy
+
+    - name: Unset git https proxy
+      git_config:
+        name: https.proxy
+        scope: global
+        state: absent
+      become: false
+      failed_when: false
+      tags: proxy
+
+# ===========================================
+# 设置环境变量供后续任务使用
+# 总是构建 proxy_env，即使 configure_proxy=false
+# 这样环境变量中的代理设置也能传递给其他 roles
+# ===========================================
+- name: Build proxy environment dictionary
+  set_fact:
+    proxy_env: >-
+      {{
+        {
+          'HTTP_PROXY': final_http_proxy,
+          'HTTPS_PROXY': final_https_proxy,
+          'ALL_PROXY': final_all_proxy,
+          'http_proxy': final_http_proxy,
+          'https_proxy': final_https_proxy,
+          'all_proxy': final_all_proxy
+        } | dict2items | rejectattr('value', 'equalto', '') | list | items2dict
+      }}
+  tags: always
+
+- name: Display final proxy_env
+  debug:
+    msg: "proxy_env: {{ proxy_env if proxy_env else '(empty)' }}"
+  tags: always

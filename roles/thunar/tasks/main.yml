@@ -1,0 +1,27 @@
+---
+# thunar tasks
+# 安装 Thunar 文件管理器和配置
+
+- name: Install Thunar packages
+  apt:
+    name: "{{ thunar_packages }}"
+    state: present
+  tags: thunar
+
+- name: Copy Thunar config directories
+  copy:
+    src: "assets/{{ item }}"
+    dest: "{{ target_user_home }}/.config/{{ item }}"
+    mode: 'preserve'
+  loop: "{{ thunar_config_dirs }}"
+  become: false
+  tags: thunar
+
+- name: Set Thunar as default file manager
+  command: xdg-mime default thunar.desktop {{ item }}
+  loop:
+    - inode/directory
+    - application/x-wayland-gnome-saved-search
+  when: install_thunar_default
+  become: false
+  tags: thunar

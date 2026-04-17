@@ -1,0 +1,7 @@
+---
+# rog role defaults
+rog_packages:
+  - power-profiles-daemon
+
+asusctl_repo: "https://gitlab.com/asus-linux/asusctl.git"
+supergfxctl_repo: "https://gitlab.com/asus-linux/supergfxctl.git"

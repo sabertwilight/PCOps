@@ -1,0 +1,22 @@
+---
+# 03-fonts role defaults
+
+# 字体包 (apt)
+font_packages:
+  - fonts-firacode
+  - fonts-font-awesome
+
+# Nerd 字体下载配置
+nerd_fonts:
+  - name: JetBrainsMono
+    url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/JetBrainsMono.tar.xz"
+    filename: JetBrainsMono.tar.xz
+    dest: "{{ target_user_home }}/.local/share/fonts/JetBrainsMono"
+  - name: VictorMono
+    url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/VictorMono.zip"
+    filename: VictorMono.zip
+    dest: "{{ target_user_home }}/.local/share/fonts/VictorMono"
+  - name: FantasqueSansMono
+    url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/FantasqueSansMono.zip"
+    filename: FantasqueSansMono.zip
+    dest: "{{ target_user_home }}/.local/share/fonts/FantasqueSansMono"

@@ -1,0 +1,109 @@
+---
+# 00-prerequisites tasks
+# 系统检查、依赖安装、用户组配置
+
+- name: Check if running as root
+  assert:
+    that:
+      - ansible_user_id != "root"
+    fail_msg: "This playbook should NOT be executed as root! Run as a regular user with sudo privileges."
+    success_msg: "Running as regular user"
+  tags: always
+
+- name: Check Ubuntu version
+  assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version == "24.04"
+    fail_msg: "This playbook is designed for Ubuntu 24.04 only. Current: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+    success_msg: "Ubuntu 24.04 detected"
+  tags: always
+
+- name: Check distro blocklist
+  block:
+    - name: Read distro blocklist
+      slurp:
+        src: "{{ playbook_dir }}/distro-blocklist.json"
+      register: blocklist_content
+      failed_when: false
+
+    - name: Parse and check blocklist
+      when: blocklist_content.content is defined
+      block:
+        - name: Parse blocklist JSON
+          set_fact:
+            distro_blocklist: "{{ blocklist_content.content | b64decode | from_json }}"
+
+        - name: Check if current distro is blocked
+          assert:
+            that:
+              - not (distro_blocklist.blocked | selectattr('match', 'defined') | selectattr('match.NAME', 'defined') | map(attribute='match.NAME') | list | ansible.builtin.contains(ansible_distribution)) or
+                not (distro_blocklist.blocked | selectattr('match.VERSION_CODENAME', 'defined') | map(attribute='match.VERSION_CODENAME') | list | ansible.builtin.contains(ansible_distribution_release))
+            fail_msg: |
+              Distro is blocked from using Hyprland PPA.
+              Check distro-blocklist.json for details.
+            success_msg: "Distro not on blocklist"
+  tags: always
+
+- name: Update apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  tags: prerequisites
+
+- name: Install prerequisite packages
+  apt:
+    name: "{{ prerequisites_packages }}"
+    state: present
+  tags: prerequisites
+
+- name: Install build dependencies
+  apt:
+    name: "{{ item }}"
+    state: build-dep
+  loop: "{{ build_dependencies }}"
+  tags: prerequisites
+
+- name: Add user to input group
+  user:
+    name: "{{ target_user }}"
+    groups: input
+    append: true
+  when: add_user_to_input_group
+  tags: prerequisites
+
+- name: Ensure build directory exists
+  file:
+    path: "{{ build_dir }}"
+    state: directory
+    mode: '0755'
+  tags: always
+
+- name: Ensure cache directories exist
+  file:
+    path: "{{ cache_dir }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - fonts
+    - git
+    - archives
+  when: use_cache
+  tags: always
+
+- name: Install Rust (required for some builds)
+  shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  args:
+    creates: "{{ target_user_home }}/.cargo/bin/cargo"
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: prerequisites
+
+- name: Source Rust environment
+  shell: source {{ target_user_home }}/.cargo/env
+  args:
+    executable: /bin/bash
+  become: false
+  changed_when: false
+  tags: prerequisites

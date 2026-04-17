@@ -1,0 +1,4 @@
+---
+# dotfiles role defaults
+hyprland_dots_repo: "https://github.com/JaKooLit/Hyprland-Dots.git"
+hyprland_dots_branch: "main"

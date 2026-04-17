@@ -1,0 +1,72 @@
+# Ansible
+*.retry
+.ansible/
+*.log
+
+# Molecule
+.molecule/
+.molecule_cache/
+*.molecule
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+# Cache directory for offline installation
+.cache/
+
+# Custom config files (may contain secrets)
+my-config.yml
+*-config.yml
+!inventory/group_vars/all.yml
+
+# Test artifacts
+test-results/
+*.tmp
