@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - role: yq
+      vars:
+        yq_version: "v4.35.1"
+        cache_dir: "{{ lookup('env', 'HOME') }}/.cache/hyprland-ansible"
+        target_user_home: "{{ lookup('env', 'HOME') }}"
+        configure_proxy: false
+        proxy_env: {}

@@ -1,0 +1,19 @@
+---
+- name: Verify
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Check yq binary exists
+      stat:
+        path: "{{ lookup('env', 'HOME') }}/.local/bin/yq"
+      register: yq_binary
+
+    - name: Assert yq is installed
+      assert:
+        that:
+          - yq_binary.stat.exists
+          - yq_binary.stat.mode == '0755'
+          - yq_binary.stat.isreg
+        fail_msg: "yq binary not found at ~/.local/bin/yq"
+        success_msg: "yq binary is correctly installed"

@@ -1,0 +1,51 @@
+---
+# yq tasks
+# 从 GitHub releases 下载并安装 yq
+
+- name: Detect system architecture for yq
+  set_fact:
+    yq_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+  tags: [yq, optional]
+
+- name: Check if yq is already installed
+  stat:
+    path: "{{ target_user_home }}/.local/bin/yq"
+  register: yq_installed
+  become: false
+  tags: [yq, optional]
+
+- name: Download yq binary
+  get_url:
+    url: "https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_linux_{{ yq_arch }}.tar.gz"
+    dest: "{{ cache_dir }}/archives/yq_linux_{{ yq_arch }}.tar.gz"
+    mode: '0644'
+  environment: "{{ proxy_env }}"
+  when: not yq_installed.stat.exists
+  tags: [yq, optional]
+
+- name: Extract yq to installation directory
+  unarchive:
+    src: "{{ cache_dir }}/archives/yq_linux_{{ yq_arch }}.tar.gz"
+    dest: "{{ target_user_home }}/.local/bin/"
+    extra_opts:
+      - --strip-components=1
+      - yq_linux_{{ yq_arch }}
+    remote_src: true
+    creates: "{{ target_user_home }}/.local/bin/yq"
+  become: false
+  when: not yq_installed.stat.exists
+  tags: [yq, optional]
+
+- name: Set executable permissions on yq
+  file:
+    path: "{{ target_user_home }}/.local/bin/yq"
+    mode: '0755'
+  become: false
+  when: not yq_installed.stat.exists
+  tags: [yq, optional]
+
+- name: Display yq installation info
+  debug:
+    msg: "yq {{ yq_version }} installed at {{ target_user_home }}/.local/bin/yq"
+  when: yq_installed.stat.exists
+  tags: [yq, optional]

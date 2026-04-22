@@ -1,0 +1,23 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: geerlingguy/docker-ubuntu2404-ansible:latest
+    pre_build_image: true
+    command: /lib/systemd/systemd
+    systemd_resolve: false
+    privileged: true
+provisioner:
+  name: ansible
+  inventory:
+    hosts:
+      all:
+        hosts:
+          localhost:
+            ansible_connection: local
+            ansible_user: root
+verifier:
+  name: ansible

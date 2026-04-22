@@ -1,0 +1,11 @@
+---
+- name: Prepare
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  tasks:
+    - name: Create cache directory
+      file:
+        path: "{{ lookup('env', 'HOME') }}/.cache/hyprland-ansible/archives"
+        state: directory
+        mode: '0755'
