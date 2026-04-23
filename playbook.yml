@@ -116,6 +116,14 @@
       when: install_dotfiles
       tags: [dotfiles, optional]
 
+    - role: yq
+      when: install_yq
+      tags: [yq, optional]
+
+    - role: jq
+      when: install_jq
+      tags: [jq, optional]
+
     # Phase 5: 最终验证
     - role: final-check
       tags: [verify, always]

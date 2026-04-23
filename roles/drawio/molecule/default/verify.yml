@@ -1,0 +1,18 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check Draw.io binary exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/bin/drawio
+      register: drawio_binary
+      when: ansible_system == "Linux"
+
+    - name: Assert Draw.io binary exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - drawio_binary.stat.exists
+        fail_msg: "Draw.io binary not found at /usr/bin/drawio"
+        success_msg: "Draw.io binary exists"
+      when: ansible_system == "Linux"

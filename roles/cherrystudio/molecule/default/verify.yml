@@ -1,0 +1,18 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check Cherry Studio binary exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/bin/CherryStudio
+      register: cherrystudio_binary
+      when: ansible_system == "Linux"
+
+    - name: Assert Cherry Studio binary exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - cherrystudio_binary.stat.exists
+        fail_msg: "Cherry Studio binary not found at /usr/bin/CherryStudio"
+        success_msg: "Cherry Studio binary exists"
+      when: ansible_system == "Linux"

@@ -1,0 +1,32 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check Google Chrome binary exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/bin/google-chrome
+      register: chrome_binary
+      when: ansible_system == "Linux"
+
+    - name: Assert Google Chrome binary exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - chrome_binary.stat.exists
+        fail_msg: "Google Chrome binary not found at /usr/bin/google-chrome"
+        success_msg: "Google Chrome binary exists"
+      when: ansible_system == "Linux"
+
+    - name: Verify Google Chrome version (Linux)
+      ansible.builtin.command: google-chrome --version
+      register: chrome_version_output
+      changed_when: false
+      when: ansible_system == "Linux"
+
+    - name: Assert Google Chrome is installed (Linux)
+      ansible.builtin.assert:
+        that:
+          - "'Google Chrome' in chrome_version_output.stdout"
+        fail_msg: "Google Chrome version check failed"
+        success_msg: "Google Chrome is installed correctly"
+      when: ansible_system == "Linux"

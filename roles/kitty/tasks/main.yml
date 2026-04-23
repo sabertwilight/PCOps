@@ -1,0 +1,91 @@
+---
+- name: Check if kitty is installed
+  ansible.builtin.command: kitty --version
+  register: kitty_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Extract installed version
+  ansible.builtin.set_fact:
+    kitty_current_version: "{{ kitty_installed_version.stdout.split()[1] if kitty_installed_version.rc == 0 and kitty_installed_version.stdout.split() | length >= 2 else '' }}"
+  when: not ansible_check_mode or kitty_installed_version.rc is defined
+
+- name: Display version status
+  ansible.builtin.debug:
+    msg: "Current: {{ kitty_current_version }}, Target: {{ kitty_version }}"
+  when: kitty_installed_version.rc == 0
+
+- name: Download kitty installer
+  ansible.builtin.command:
+    cmd: curl -fsSL https://sw.kovidgoyal.net/kitty/installer.sh -o /tmp/kitty-installer.sh
+  environment:
+    http_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+    https_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+  when: kitty_current_version != kitty_version
+  changed_when: true
+
+- name: Set installer permissions
+  ansible.builtin.file:
+    path: /tmp/kitty-installer.sh
+    mode: "0755"
+  when: kitty_current_version != kitty_version
+
+- name: Install kitty (Linux)
+  ansible.builtin.command:
+    cmd: /tmp/kitty-installer.sh dest=/opt launch=n installer=version-{{ kitty_version }}
+  environment:
+    PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    http_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+    https_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+  when:
+    - kitty_current_version != kitty_version
+    - ansible_system == "Linux"
+  changed_when: true
+
+- name: Install kitty (macOS)
+  ansible.builtin.command:
+    cmd: /tmp/kitty-installer.sh launch=n installer=version-{{ kitty_version }}
+  environment:
+    http_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+    https_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+  when:
+    - kitty_current_version != kitty_version
+    - ansible_system == "Darwin"
+  changed_when: true
+
+- name: Create kitty symlink (Linux only)
+  ansible.builtin.file:
+    src: /opt/kitty.app/bin/kitty
+    dest: /usr/local/bin/kitty
+    state: link
+    force: true
+  when:
+    - ansible_system == "Linux"
+    - kitty_current_version != kitty_version
+
+- name: Create kitten symlink (Linux only)
+  ansible.builtin.file:
+    src: /opt/kitty.app/bin/kitten
+    dest: /usr/local/bin/kitten
+    state: link
+    force: true
+  when:
+    - ansible_system == "Linux"
+    - kitty_current_version != kitty_version
+
+- name: Verify kitty installation
+  ansible.builtin.command: kitty --version
+  register: kitty_verify
+  changed_when: false
+
+- name: Assert kitty version matches
+  ansible.builtin.assert:
+    that:
+      - kitty_version in kitty_verify.stdout
+    fail_msg: "Installed version {{ kitty_verify.stdout }} does not match target {{ kitty_version }}"
+    success_msg: "kitty {{ kitty_version }} installed successfully"
+
+- name: Clean up installer
+  ansible.builtin.file:
+    path: /tmp/kitty-installer.sh
+    state: absent

@@ -1,0 +1,7 @@
+---
+# jq role defaults
+jq_version: "1.7.1"
+cache_dir: /tmp/jq-cache
+proxy_env:
+  http_proxy: "http://127.0.0.1:7890"
+  https_proxy: "http://127.0.0.1:7890"

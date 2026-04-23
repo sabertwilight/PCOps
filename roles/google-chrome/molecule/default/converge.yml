@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include google-chrome"
+      include_role:
+        name: "google-chrome"

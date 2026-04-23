@@ -24,6 +24,8 @@ install_pokemon_scripts: true      # Pokemon 彩色脚本
 install_nwg_look: true             # nwg-look GTK 主题工具
 install_rog: false                 # ASUS ROG 笔记本工具
 install_dotfiles: true             # KooL Hyprland dotfiles
+install_yq: true                    # yq YAML 处理器
+install_jq: true                    # jq JSON 处理器
 add_user_to_input_group: true      # 添加用户到 input 组
 
 # ===========================================
@@ -37,6 +39,7 @@ nwg_displays_version: "v0.3.22"
 swappy_version: "v1.5.1"
 wallust_version: "v3.2.0"
 yq_version: "v4.35.1"
+jq_version: "1.7.1"
 
 # ===========================================
 # 用户配置

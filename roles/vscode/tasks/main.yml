@@ -1,0 +1,113 @@
+---
+- name: Check if VS Code is installed (Linux)
+  ansible.builtin.stat:
+    path: /usr/bin/code
+  register: vscode_binary_linux
+  when: ansible_system == "Linux"
+
+- name: Check if VS Code is installed (macOS)
+  ansible.builtin.stat:
+    path: /Applications/Visual Studio Code.app
+  register: vscode_binary_macos
+  when: ansible_system == "Darwin"
+
+- name: Get installed VS Code version (Linux)
+  ansible.builtin.command: code --version
+  register: vscode_version_linux
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_system == "Linux"
+    - vscode_binary_linux.stat.exists
+
+- name: Install VS Code (Ubuntu/Debian)
+  when:
+    - ansible_system == "Linux"
+    - ansible_os_family == "Debian"
+    - not vscode_binary_linux.stat.exists
+  block:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - gpg
+          - curl
+        state: present
+      environment:
+        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+
+    - name: Download and dearmor Microsoft GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg
+      args:
+        creates: /usr/share/keyrings/microsoft.gpg
+      environment:
+        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+
+    - name: Set GPG key permissions
+      ansible.builtin.file:
+        path: /usr/share/keyrings/microsoft.gpg
+        mode: "0644"
+
+    - name: Add VS Code APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
+        filename: vscode
+        state: present
+        update_cache: yes
+
+    - name: Install VS Code package
+      ansible.builtin.apt:
+        name: code
+        state: present
+      environment:
+        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+
+- name: Install VS Code (macOS)
+  when:
+    - ansible_system == "Darwin"
+    - not vscode_binary_macos.stat.exists
+  block:
+    - name: Check if Homebrew is installed
+      ansible.builtin.stat:
+        path: /opt/homebrew/bin/brew
+      register: homebrew_check
+
+    - name: Install VS Code via Homebrew cask
+      ansible.builtin.command:
+        cmd: /opt/homebrew/bin/brew install --cask visual-studio-code
+      environment:
+        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+      when: homebrew_check.stat.exists
+      changed_when: true
+
+- name: Verify VS Code installation (Linux)
+  ansible.builtin.stat:
+    path: /usr/bin/code
+  register: vscode_verify_linux
+  when: ansible_system == "Linux"
+
+- name: Verify VS Code installation (macOS)
+  ansible.builtin.stat:
+    path: /Applications/Visual Studio Code.app
+  register: vscode_verify_macos
+  when: ansible_system == "Darwin"
+
+- name: Assert VS Code is installed (Linux)
+  ansible.builtin.assert:
+    that:
+      - vscode_verify_linux.stat.exists
+    fail_msg: "VS Code binary not found at /usr/bin/code"
+    success_msg: "VS Code installed successfully"
+  when: ansible_system == "Linux"
+
+- name: Assert VS Code is installed (macOS)
+  ansible.builtin.assert:
+    that:
+      - vscode_verify_macos.stat.exists
+    fail_msg: "Visual Studio Code.app not found in /Applications"
+    success_msg: "VS Code installed successfully"
+  when: ansible_system == "Darwin"

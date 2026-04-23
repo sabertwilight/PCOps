@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check jq binary exists
+      stat:
+        path: /usr/local/bin/jq
+      register: jq_binary
+
+    - name: Assert jq is installed
+      assert:
+        that:
+          - jq_binary.stat.exists
+          - jq_binary.stat.mode == '0755'
+          - jq_binary.stat.isreg
+        fail_msg: "jq binary not found at /usr/local/bin/jq"
+        success_msg: "jq binary is correctly installed"
+
+    - name: Verify jq version
+      command: /usr/local/bin/jq --version
+      register: jq_version_output
+      changed_when: false
+
+    - name: Assert jq version
+      assert:
+        that:
+          - "'jq' in jq_version_output.stdout"
+        fail_msg: "jq version check failed"
+        success_msg: "jq is installed correctly"

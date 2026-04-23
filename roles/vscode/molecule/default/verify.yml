@@ -1,0 +1,32 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check VS Code binary exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/bin/code
+      register: vscode_binary
+      when: ansible_system == "Linux"
+
+    - name: Assert VS Code binary exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - vscode_binary.stat.exists
+        fail_msg: "VS Code binary not found at /usr/bin/code"
+        success_msg: "VS Code binary exists"
+      when: ansible_system == "Linux"
+
+    - name: Verify VS Code version (Linux)
+      ansible.builtin.command: code --version --no-sandbox --user-data-dir=/tmp/vscode-test
+      register: vscode_version_output
+      changed_when: false
+      when: ansible_system == "Linux"
+
+    - name: Assert VS Code is installed (Linux)
+      ansible.builtin.assert:
+        that:
+          - vscode_version_output.rc == 0
+        fail_msg: "VS Code version check failed"
+        success_msg: "VS Code is installed correctly"
+      when: ansible_system == "Linux"

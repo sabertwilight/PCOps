@@ -1,11 +1,12 @@
 ---
 - name: Prepare
-  hosts: localhost
-  connection: local
+  hosts: all
   gather_facts: true
   tasks:
-    - name: Create cache directory
-      file:
-        path: "{{ lookup('env', 'HOME') }}/.cache/hyprland-ansible/archives"
-        state: directory
-        mode: '0755'
+    - name: Install dependencies for yq
+      apt:
+        name:
+          - zstd
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"

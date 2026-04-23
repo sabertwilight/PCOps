@@ -1,12 +1,11 @@
 ---
 - name: Verify
-  hosts: localhost
-  connection: local
-  gather_facts: false
+  hosts: all
+  gather_facts: true
   tasks:
     - name: Check yq binary exists
       stat:
-        path: "{{ lookup('env', 'HOME') }}/.local/bin/yq"
+        path: /usr/local/bin/yq
       register: yq_binary
 
     - name: Assert yq is installed
@@ -15,5 +14,17 @@
           - yq_binary.stat.exists
           - yq_binary.stat.mode == '0755'
           - yq_binary.stat.isreg
-        fail_msg: "yq binary not found at ~/.local/bin/yq"
+        fail_msg: "yq binary not found at /usr/local/bin/yq"
         success_msg: "yq binary is correctly installed"
+
+    - name: Verify yq version
+      command: /usr/local/bin/yq --version
+      register: yq_version_output
+      changed_when: false
+
+    - name: Assert yq version
+      assert:
+        that:
+          - "'yq' in yq_version_output.stdout"
+        fail_msg: "yq version check failed"
+        success_msg: "yq is installed correctly"

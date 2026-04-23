@@ -1,0 +1,60 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check kitty binary exists
+      ansible.builtin.stat:
+        path: /opt/kitty.app/bin/kitty
+      register: kitty_binary
+      when: ansible_system == "Linux"
+
+    - name: Assert kitty binary exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - kitty_binary.stat.exists
+        fail_msg: "kitty binary not found at /opt/kitty.app/bin/kitty"
+        success_msg: "kitty binary exists"
+      when: ansible_system == "Linux"
+
+    - name: Check kitty symlink exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/local/bin/kitty
+      register: kitty_symlink
+      when: ansible_system == "Linux"
+
+    - name: Assert kitty symlink exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - kitty_symlink.stat.exists
+          - kitty_symlink.stat.islnk
+        fail_msg: "kitty symlink not found at /usr/local/bin/kitty"
+        success_msg: "kitty symlink exists"
+      when: ansible_system == "Linux"
+
+    - name: Check kitten symlink exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/local/bin/kitten
+      register: kitten_symlink
+      when: ansible_system == "Linux"
+
+    - name: Assert kitten symlink exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - kitten_symlink.stat.exists
+          - kitten_symlink.stat.islnk
+        fail_msg: "kitten symlink not found at /usr/local/bin/kitten"
+        success_msg: "kitten symlink exists"
+      when: ansible_system == "Linux"
+
+    - name: Verify kitty version
+      ansible.builtin.command: kitty --version
+      register: kitty_version_output
+      changed_when: false
+
+    - name: Assert kitty version is correct
+      ansible.builtin.assert:
+        that:
+          - "'0.35.0' in kitty_version_output.stdout"
+        fail_msg: "kitty version does not match expected 0.35.0"
+        success_msg: "kitty version is 0.35.0"

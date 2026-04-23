@@ -1,0 +1,17 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Install curl (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: curl
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Install curl (RedHat/CentOS)
+      ansible.builtin.yum:
+        name: curl
+        state: present
+      when: ansible_os_family == "RedHat"

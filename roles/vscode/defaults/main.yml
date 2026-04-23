@@ -1,0 +1,8 @@
+---
+vscode_version: "latest"
+
+# Proxy settings (optional)
+# For Docker Molecule tests, use Docker bridge gateway IP (172.17.0.1)
+# For real hosts, use 127.0.0.1 or actual IP
+vscode_proxy_host: "172.17.0.1"
+vscode_proxy_port: "7890"

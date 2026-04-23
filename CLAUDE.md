@@ -28,6 +28,15 @@ ansible-playbook playbook.yml -K --check           # Dry run
 ansible-playbook playbook.yml -K -vvv              # Verbose output
 ```
 
+### Molecule Testing
+```bash
+cd roles/<role_name> && molecule test              # Run all test stages
+cd roles/<role_name> && molecule converge         # Create and provision
+cd roles/<role_name> && molecule verify            # Run verification
+```
+
+All roles use `geerlingguy/docker-ubuntu2404-ansible:latest` with `network_mode: host`. For network access during testing, set proxy via `proxy_env` variable in role defaults.
+
 ## Architecture
 
 ### Main Entry Points
@@ -77,6 +86,7 @@ Edit `inventory/group_vars/all.yml` to customize installation:
 | `install_thunar` | `true` | Thunar file manager |
 | `install_sddm` | `true` | SDDM login manager |
 | `install_zsh` | `true` | Zsh + Oh-My-Zsh |
+| `install_ags` | `true` | AGS desktop overview |
 | `install_dotfiles` | `true` | KooL Hyprland dotfiles |
 | `offline_mode` | `false` | Use cached files only |
 | `use_cache` | `true` | Cache downloads |

@@ -1,0 +1,86 @@
+---
+- name: Check if Draw.io is installed (Linux)
+  ansible.builtin.stat:
+    path: /usr/bin/drawio
+  register: drawio_binary_linux
+  when: ansible_system == "Linux"
+
+- name: Check if Draw.io is installed (macOS)
+  ansible.builtin.stat:
+    path: /Applications/draw.io.app
+  register: drawio_binary_macos
+  when: ansible_system == "Darwin"
+
+- name: Install Draw.io (Ubuntu/Debian)
+  when:
+    - ansible_system == "Linux"
+    - ansible_os_family == "Debian"
+    - not drawio_binary_linux.stat.exists
+  block:
+    - name: Download Draw.io deb package
+      ansible.builtin.command:
+        cmd: curl -fsSL https://github.com/jgraph/drawio-desktop/releases/download/v{{ drawio_version }}/drawio-amd64-{{ drawio_version }}.deb -o /tmp/drawio.deb
+      environment:
+        http_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+        https_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+      changed_when: true
+
+    - name: Install Draw.io deb package
+      ansible.builtin.apt:
+        deb: /tmp/drawio.deb
+        state: present
+      environment:
+        http_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+        https_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+
+    - name: Clean up deb package
+      ansible.builtin.file:
+        path: /tmp/drawio.deb
+        state: absent
+
+- name: Install Draw.io (macOS)
+  when:
+    - ansible_system == "Darwin"
+    - not drawio_binary_macos.stat.exists
+  block:
+    - name: Check if Homebrew is installed
+      ansible.builtin.stat:
+        path: /opt/homebrew/bin/brew
+      register: homebrew_check
+
+    - name: Install Draw.io via Homebrew cask
+      ansible.builtin.command:
+        cmd: /opt/homebrew/bin/brew install --cask drawio
+      environment:
+        http_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+        https_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+      when: homebrew_check.stat.exists
+      changed_when: true
+
+- name: Verify Draw.io installation (Linux)
+  ansible.builtin.stat:
+    path: /usr/bin/drawio
+  register: drawio_verify_linux
+  when: ansible_system == "Linux"
+
+- name: Verify Draw.io installation (macOS)
+  ansible.builtin.stat:
+    path: /Applications/draw.io.app
+  register: drawio_verify_macos
+  when: ansible_system == "Darwin"
+
+- name: Assert Draw.io is installed (Linux)
+  ansible.builtin.assert:
+    that:
+      - drawio_verify_linux.stat.exists
+    fail_msg: "Draw.io binary not found at /usr/bin/drawio"
+    success_msg: "Draw.io installed successfully"
+  when: ansible_system == "Linux"
+
+- name: Assert Draw.io is installed (macOS)
+  ansible.builtin.assert:
+    that:
+      - drawio_verify_macos.stat.exists
+    fail_msg: "draw.io.app not found in /Applications"
+    success_msg: "Draw.io installed successfully"
+  when: ansible_system == "Darwin"

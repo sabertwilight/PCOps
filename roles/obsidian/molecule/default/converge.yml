@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include obsidian"
+      include_role:
+        name: "obsidian"

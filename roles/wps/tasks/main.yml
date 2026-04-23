@@ -1,0 +1,103 @@
+---
+- name: Check if WPS Office is installed (Linux)
+  ansible.builtin.stat:
+    path: /usr/bin/wps
+  register: wps_binary_linux
+  when: ansible_system == "Linux"
+
+- name: Check if WPS Office is installed (macOS)
+  ansible.builtin.stat:
+    path: /Applications/wpsoffice.app
+  register: wps_binary_macos
+  when: ansible_system == "Darwin"
+
+- name: Install WPS Office (Ubuntu/Debian)
+  when:
+    - ansible_system == "Linux"
+    - ansible_os_family == "Debian"
+    - not wps_binary_linux.stat.exists
+  block:
+    - name: Get WPS Office download URL
+      ansible.builtin.shell: |
+        curl -fsSL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+             -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+             -H "Accept-Language: en-US,en;q=0.5" \
+             -H "Connection: keep-alive" \
+             "https://linux.wps.cn/" | grep -oE 'https?://[^"]+amd64\.deb' | head -1
+      environment:
+        http_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+        https_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+      register: wps_download_url
+      changed_when: false
+
+    - name: Download WPS Office deb package
+      ansible.builtin.shell: |
+        curl -fsSL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+             -H "Referer: https://linux.wps.cn/" \
+             -H "Accept: application/octet-stream" \
+             -o /tmp/wps-office.deb \
+             "{{ wps_download_url.stdout }}"
+      environment:
+        http_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+        https_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+      changed_when: true
+
+    - name: Install WPS Office deb package
+      ansible.builtin.apt:
+        deb: /tmp/wps-office.deb
+        state: present
+      environment:
+        http_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+        https_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+
+    - name: Clean up deb package
+      ansible.builtin.file:
+        path: /tmp/wps-office.deb
+        state: absent
+
+- name: Install WPS Office (macOS)
+  when:
+    - ansible_system == "Darwin"
+    - not wps_binary_macos.stat.exists
+  block:
+    - name: Check if Homebrew is installed
+      ansible.builtin.stat:
+        path: /opt/homebrew/bin/brew
+      register: homebrew_check
+
+    - name: Install WPS Office via Homebrew cask
+      ansible.builtin.command:
+        cmd: /opt/homebrew/bin/brew install --cask wpsoffice-cn
+      environment:
+        http_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+        https_proxy: "http://{{ wps_proxy_host }}:{{ wps_proxy_port }}"
+      when: homebrew_check.stat.exists
+      changed_when: true
+
+- name: Verify WPS Office installation (Linux)
+  ansible.builtin.stat:
+    path: /usr/bin/wps
+  register: wps_verify_linux
+  when: ansible_system == "Linux"
+
+- name: Verify WPS Office installation (macOS)
+  ansible.builtin.stat:
+    path: /Applications/wpsoffice.app
+  register: wps_verify_macos
+  when: ansible_system == "Darwin"
+
+- name: Assert WPS Office is installed (Linux)
+  ansible.builtin.assert:
+    that:
+      - wps_verify_linux.stat.exists
+    fail_msg: "WPS Office binary not found at /usr/bin/wps"
+    success_msg: "WPS Office installed successfully"
+  when: ansible_system == "Linux"
+
+- name: Assert WPS Office is installed (macOS)
+  ansible.builtin.assert:
+    that:
+      - wps_verify_macos.stat.exists
+    fail_msg: "wpsoffice.app not found in /Applications"
+    success_msg: "WPS Office installed successfully"
+  when: ansible_system == "Darwin"

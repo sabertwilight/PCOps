@@ -1,0 +1,46 @@
+---
+# jq tasks
+# 从 GitHub releases 下载并安装 jq
+
+- name: Detect system architecture for jq
+  set_fact:
+    jq_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+  tags: [jq, optional]
+
+- name: Check if jq is already installed
+  stat:
+    path: /usr/local/bin/jq
+  register: jq_installed
+  tags: [jq, optional]
+
+- name: Create cache directory
+  file:
+    path: "{{ cache_dir }}/archives"
+    state: directory
+    mode: '0755'
+  when: not jq_installed.stat.exists
+  tags: [jq, optional]
+
+- name: Download jq binary
+  get_url:
+    url: "https://github.com/jqlang/jq/releases/download/jq-{{ jq_version }}/jq-linux-{{ jq_arch }}"
+    dest: "{{ cache_dir }}/archives/jq-linux-{{ jq_arch }}"
+    mode: '0644'
+  environment: "{{ proxy_env }}"
+  when: not jq_installed.stat.exists
+  tags: [jq, optional]
+
+- name: Install jq to binary directory
+  copy:
+    src: "{{ cache_dir }}/archives/jq-linux-{{ jq_arch }}"
+    dest: /usr/local/bin/jq
+    mode: '0755'
+    remote_src: true
+  when: not jq_installed.stat.exists
+  tags: [jq, optional]
+
+- name: Display jq installation info
+  debug:
+    msg: "jq {{ jq_version }} installed at /usr/local/bin/jq"
+  when: jq_installed.stat.exists
+  tags: [jq, optional]

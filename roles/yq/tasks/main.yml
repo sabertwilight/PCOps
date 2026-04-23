@@ -9,9 +9,16 @@
 
 - name: Check if yq is already installed
   stat:
-    path: "{{ target_user_home }}/.local/bin/yq"
+    path: /usr/local/bin/yq
   register: yq_installed
-  become: false
+  tags: [yq, optional]
+
+- name: Create cache directory
+  file:
+    path: "{{ cache_dir }}/archives"
+    state: directory
+    mode: '0755'
+  when: not yq_installed.stat.exists
   tags: [yq, optional]
 
 - name: Download yq binary
@@ -26,26 +33,30 @@
 - name: Extract yq to installation directory
   unarchive:
     src: "{{ cache_dir }}/archives/yq_linux_{{ yq_arch }}.tar.gz"
-    dest: "{{ target_user_home }}/.local/bin/"
+    dest: /usr/local/bin/
     extra_opts:
       - --strip-components=1
-      - yq_linux_{{ yq_arch }}
     remote_src: true
-    creates: "{{ target_user_home }}/.local/bin/yq"
-  become: false
+    creates: /usr/local/bin/yq_linux_{{ yq_arch }}
+  when: not yq_installed.stat.exists
+  tags: [yq, optional]
+
+- name: Rename yq binary to yq
+  command:
+    cmd: mv /usr/local/bin/yq_linux_{{ yq_arch }} /usr/local/bin/yq
+    removes: /usr/local/bin/yq_linux_{{ yq_arch }}
   when: not yq_installed.stat.exists
   tags: [yq, optional]
 
 - name: Set executable permissions on yq
   file:
-    path: "{{ target_user_home }}/.local/bin/yq"
+    path: /usr/local/bin/yq
     mode: '0755'
-  become: false
   when: not yq_installed.stat.exists
   tags: [yq, optional]
 
 - name: Display yq installation info
   debug:
-    msg: "yq {{ yq_version }} installed at {{ target_user_home }}/.local/bin/yq"
+    msg: "yq {{ yq_version }} installed at /usr/local/bin/yq"
   when: yq_installed.stat.exists
   tags: [yq, optional]

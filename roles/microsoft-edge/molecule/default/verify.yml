@@ -1,0 +1,32 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check Microsoft Edge binary exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/bin/microsoft-edge
+      register: edge_binary
+      when: ansible_system == "Linux"
+
+    - name: Assert Microsoft Edge binary exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - edge_binary.stat.exists
+        fail_msg: "Microsoft Edge binary not found at /usr/bin/microsoft-edge"
+        success_msg: "Microsoft Edge binary exists"
+      when: ansible_system == "Linux"
+
+    - name: Verify Microsoft Edge version (Linux)
+      ansible.builtin.command: microsoft-edge --version
+      register: edge_version_output
+      changed_when: false
+      when: ansible_system == "Linux"
+
+    - name: Assert Microsoft Edge is installed (Linux)
+      ansible.builtin.assert:
+        that:
+          - "'Microsoft Edge' in edge_version_output.stdout"
+        fail_msg: "Microsoft Edge version check failed"
+        success_msg: "Microsoft Edge is installed correctly"
+      when: ansible_system == "Linux"

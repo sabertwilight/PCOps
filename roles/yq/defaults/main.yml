@@ -1,0 +1,8 @@
+---
+# yq role defaults
+yq_version: "v4.35.1"
+cache_dir: /tmp/yq-cache
+configure_proxy: false
+proxy_env:
+  http_proxy: "http://127.0.0.1:7890"
+  https_proxy: "http://127.0.0.1:7890"

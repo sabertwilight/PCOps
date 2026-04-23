@@ -1,0 +1,6 @@
+---
+# Proxy settings (optional)
+# For Docker Molecule tests, use 127.0.0.1 (host network mode)
+# For real hosts, use 127.0.0.1 or actual IP
+google_chrome_proxy_host: "127.0.0.1"
+google_chrome_proxy_port: "7890"

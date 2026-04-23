@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include microsoft-edge"
+      include_role:
+        name: "microsoft-edge"
