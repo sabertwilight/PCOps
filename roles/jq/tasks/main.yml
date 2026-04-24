@@ -1,46 +1,71 @@
 ---
 # jq tasks
-# 从 GitHub releases 下载并安装 jq
+# 从 GitHub releases 下载并安装 jq (Linux)
+# 或通过 Homebrew 安装 (macOS)
+
+- name: Check if jq is already installed (Linux)
+  stat:
+    path: /usr/local/bin/jq
+  register: jq_installed_linux
+  when: ansible_system == "Linux"
+
+- name: Check if jq is already installed (macOS)
+  command: brew list jq
+  register: jq_installed_macos
+  changed_when: false
+  failed_when: false
+  when: ansible_system == "Darwin"
 
 - name: Detect system architecture for jq
   set_fact:
     jq_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
-  tags: [jq, optional]
+  when: ansible_system == "Linux"
 
-- name: Check if jq is already installed
-  stat:
-    path: /usr/local/bin/jq
-  register: jq_installed
-  tags: [jq, optional]
-
-- name: Create cache directory
+- name: Create cache directory (Linux)
   file:
     path: "{{ cache_dir }}/archives"
     state: directory
     mode: '0755'
-  when: not jq_installed.stat.exists
-  tags: [jq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not jq_installed_linux.stat.exists
 
-- name: Download jq binary
+- name: Download jq binary (Linux)
   get_url:
     url: "https://github.com/jqlang/jq/releases/download/jq-{{ jq_version }}/jq-linux-{{ jq_arch }}"
     dest: "{{ cache_dir }}/archives/jq-linux-{{ jq_arch }}"
     mode: '0644'
   environment: "{{ proxy_env }}"
-  when: not jq_installed.stat.exists
-  tags: [jq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not jq_installed_linux.stat.exists
 
-- name: Install jq to binary directory
+- name: Install jq to binary directory (Linux)
   copy:
     src: "{{ cache_dir }}/archives/jq-linux-{{ jq_arch }}"
     dest: /usr/local/bin/jq
     mode: '0755'
     remote_src: true
-  when: not jq_installed.stat.exists
-  tags: [jq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not jq_installed_linux.stat.exists
 
-- name: Display jq installation info
+- name: Install jq via Homebrew (macOS)
+  command: brew install jq
+  when:
+    - ansible_system == "Darwin"
+    - jq_installed_macos.rc != 0
+
+- name: Display jq installation info (Linux)
   debug:
     msg: "jq {{ jq_version }} installed at /usr/local/bin/jq"
-  when: jq_installed.stat.exists
-  tags: [jq, optional]
+  when:
+    - ansible_system == "Linux"
+    - jq_installed_linux.stat.exists
+
+- name: Display jq installation info (macOS)
+  debug:
+    msg: "jq installed via Homebrew"
+  when:
+    - ansible_system == "Darwin"
+    - jq_installed_macos.rc == 0

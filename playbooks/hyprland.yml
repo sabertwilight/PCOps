@@ -13,12 +13,12 @@
   become: true
   gather_facts: true
 
-  vars:
-    # 运行时设置用户信息
-    target_user: "{{ ansible_user_id }}"
-    target_user_home: "{{ ansible_env.HOME }}"
-
   pre_tasks:
+    - name: Check Ubuntu 24.04 requirement
+      ansible.builtin.fail:
+        msg: "This playbook only runs on Ubuntu 24.04"
+      when: ansible_facts['distribution'] != "Ubuntu" or ansible_facts['distribution_version'] != "24.04"
+
     - name: Set target user facts
       set_fact:
         target_user: "{{ ansible_user_id }}"
@@ -75,6 +75,7 @@
     - role: 03-fonts
       tags: [fonts, core]
 
+
     # Phase 3: 从源码构建的工具
     - role: 04-build-tools
       tags: [build-tools, core]
@@ -108,21 +109,9 @@
       when: install_ags
       tags: [ags, optional]
 
-    - role: rog
-      when: install_rog
-      tags: [rog, optional]
-
     - role: dotfiles
       when: install_dotfiles
       tags: [dotfiles, optional]
-
-    - role: yq
-      when: install_yq
-      tags: [yq, optional]
-
-    - role: jq
-      when: install_jq
-      tags: [jq, optional]
 
     - role: fcitx5-rime-ice
       when: install_fcitx5_rime_ice

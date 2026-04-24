@@ -1,0 +1,48 @@
+---
+# Application Installation Playbook
+# 支持 Ubuntu 24.04 和 macOS 双平台
+# 各 role 根据 ansible_system 自动选择合适的安装方式
+#
+# 用法:
+#   ansible-playbook playbooks/app.yml -K                    # 安装全部
+#   ansible-playbook playbooks/app.yml -K --tags "dev"       # 只安装开发工具
+
+- name: Install Applications
+  hosts: localhost
+  gather_facts: true
+
+  vars:
+    target_user: "{{ ansible_user_id }}"
+    target_user_home: "{{ ansible_env.HOME }}"
+
+  roles:
+    # 开发工具
+    - role: vscode
+      tags: [dev, app]
+
+    - role: dbeaver
+      tags: [dev, app, database]
+
+    # 实用工具
+    - role: jq
+      tags: [util, app]
+
+    - role: yq
+      tags: [util, app]
+
+    # 应用
+    - role: cherrystudio
+      tags: [app, ai]
+
+    - role: obsidian
+      tags: [app, notes]
+
+    - role: drawio
+      tags: [app, diagram]
+
+    - role: wps
+      tags: [app, office]
+
+    # 终端
+    - role: kitty
+      tags: [app, terminal]

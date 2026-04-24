@@ -1,36 +1,46 @@
 ---
 # yq tasks
-# 从 GitHub releases 下载并安装 yq
+# 从 GitHub releases 下载并安装 yq (Linux)
+# 或通过 Homebrew 安装 (macOS)
 
-- name: Detect system architecture for yq
-  set_fact:
-    yq_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
-  tags: [yq, optional]
-
-- name: Check if yq is already installed
+- name: Check if yq is already installed (Linux)
   stat:
     path: /usr/local/bin/yq
-  register: yq_installed
-  tags: [yq, optional]
+  register: yq_installed_linux
+  when: ansible_system == "Linux"
 
-- name: Create cache directory
+- name: Check if yq is already installed (macOS)
+  command: brew list yq
+  register: yq_installed_macos
+  changed_when: false
+  failed_when: false
+  when: ansible_system == "Darwin"
+
+- name: Detect system architecture for yq (Linux)
+  set_fact:
+    yq_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+  when: ansible_system == "Linux"
+
+- name: Create cache directory (Linux)
   file:
     path: "{{ cache_dir }}/archives"
     state: directory
     mode: '0755'
-  when: not yq_installed.stat.exists
-  tags: [yq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not yq_installed_linux.stat.exists
 
-- name: Download yq binary
+- name: Download yq binary (Linux)
   get_url:
     url: "https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_linux_{{ yq_arch }}.tar.gz"
     dest: "{{ cache_dir }}/archives/yq_linux_{{ yq_arch }}.tar.gz"
     mode: '0644'
   environment: "{{ proxy_env }}"
-  when: not yq_installed.stat.exists
-  tags: [yq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not yq_installed_linux.stat.exists
 
-- name: Extract yq to installation directory
+- name: Extract yq to installation directory (Linux)
   unarchive:
     src: "{{ cache_dir }}/archives/yq_linux_{{ yq_arch }}.tar.gz"
     dest: /usr/local/bin/
@@ -38,25 +48,42 @@
       - --strip-components=1
     remote_src: true
     creates: /usr/local/bin/yq_linux_{{ yq_arch }}
-  when: not yq_installed.stat.exists
-  tags: [yq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not yq_installed_linux.stat.exists
 
-- name: Rename yq binary to yq
+- name: Rename yq binary to yq (Linux)
   command:
     cmd: mv /usr/local/bin/yq_linux_{{ yq_arch }} /usr/local/bin/yq
     removes: /usr/local/bin/yq_linux_{{ yq_arch }}
-  when: not yq_installed.stat.exists
-  tags: [yq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not yq_installed_linux.stat.exists
 
-- name: Set executable permissions on yq
+- name: Set executable permissions on yq (Linux)
   file:
     path: /usr/local/bin/yq
     mode: '0755'
-  when: not yq_installed.stat.exists
-  tags: [yq, optional]
+  when:
+    - ansible_system == "Linux"
+    - not yq_installed_linux.stat.exists
 
-- name: Display yq installation info
+- name: Install yq via Homebrew (macOS)
+  command: brew install yq
+  when:
+    - ansible_system == "Darwin"
+    - yq_installed_macos.rc != 0
+
+- name: Display yq installation info (Linux)
   debug:
     msg: "yq {{ yq_version }} installed at /usr/local/bin/yq"
-  when: yq_installed.stat.exists
-  tags: [yq, optional]
+  when:
+    - ansible_system == "Linux"
+    - yq_installed_linux.stat.exists
+
+- name: Display yq installation info (macOS)
+  debug:
+    msg: "yq installed via Homebrew"
+  when:
+    - ansible_system == "Darwin"
+    - yq_installed_macos.rc == 0
