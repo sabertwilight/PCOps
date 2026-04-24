@@ -1,8 +1,5 @@
 ---
-google_chrome_version: "latest"
+# google-chrome role defaults
 
-# Proxy settings (optional)
-# For Docker Molecule tests, use 127.0.0.1 (host network mode)
-# For real hosts, use 127.0.0.1 or actual IP
-google_chrome_proxy_host: "127.0.0.1"
-google_chrome_proxy_port: "7890"
+# 是否启用代理（继承 all.yml 的 configure_proxy）
+google_chrome_proxy: "{{ configure_proxy | default(false) }}

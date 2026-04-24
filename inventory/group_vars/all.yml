@@ -103,6 +103,6 @@ apt_proxy_https: ""
 
 # 环境变量代理 (用于 git, curl, npm, cargo 等)
 # 留空则自动从环境变量读取
-proxy_http: ""
-proxy_https: ""
-proxy_all: ""
+proxy_http: "http://127.0.0.1:7890"
+proxy_https: "http://127.0.0.1:7890"
+proxy_all: "socks5://127.0.0.1:7890"

@@ -20,6 +20,13 @@
     - ansible_system == "Linux"
     - chrome_binary_linux.stat.exists
 
+- name: Set proxy environment
+  set_fact:
+    chrome_proxy_env:
+      http_proxy: "{{ proxy_http }}"
+      https_proxy: "{{ proxy_https }}"
+  when: configure_proxy | default(false)
+
 - name: Install Google Chrome (Ubuntu/Debian)
   when:
     - ansible_system == "Linux"
@@ -32,18 +39,13 @@
           - gpg
           - curl
         state: present
-      environment:
-        http_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
-        https_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
 
     - name: Download and dearmor Google Chrome GPG key
       ansible.builtin.shell: |
         curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
       args:
         creates: /usr/share/keyrings/google-chrome.gpg
-      environment:
-        http_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
-        https_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
+      environment: "{{ chrome_proxy_env | default({}) }}"
 
     - name: Set GPG key permissions
       ansible.builtin.file:
@@ -55,15 +57,17 @@
         repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main"
         filename: google-chrome
         state: present
-        update_cache: yes
+
+    - name: Update APT cache
+      ansible.builtin.command: apt-get update
+      changed_when: false
 
     - name: Install Google Chrome package
       ansible.builtin.apt:
         name: google-chrome-stable
         state: present
-      environment:
-        http_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
-        https_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
+        update_cache: yes
+      environment: "{{ chrome_proxy_env | default({}) }}"
 
 - name: Install Google Chrome (macOS)
   when:
@@ -78,9 +82,7 @@
     - name: Install Google Chrome via Homebrew cask
       ansible.builtin.command:
         cmd: /opt/homebrew/bin/brew install --cask google-chrome
-      environment:
-        http_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
-        https_proxy: "http://{{ google_chrome_proxy_host }}:{{ google_chrome_proxy_port }}"
+      environment: "{{ chrome_proxy_env | default({}) }}"
       when: homebrew_check.stat.exists
       changed_when: true
 
