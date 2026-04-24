@@ -1,0 +1,6 @@
+---
+# fcitx5-rime-ice handlers
+- name: Restart fcitx5
+  systemd:
+    name: fcitx5
+    state: restarted

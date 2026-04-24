@@ -1,0 +1,73 @@
+---
+# fcitx5-rime-ice tasks
+# 安装 fcitx5 + rime-ice 雾凇拼音
+
+- name: Install fcitx5 packages
+  apt:
+    name: "{{ fcitx5_packages }}"
+    state: present
+  tags: [fcitx, rime]
+
+- name: Create Rime config directory
+  file:
+    path: "{{ target_user_home }}/.config/fcitx5/rime"
+    state: directory
+    mode: '0755'
+  tags: [fcitx, rime]
+
+- name: Install plum (东风破) via git clone
+  git:
+    repo: https://github.com/rime/plum.git
+    dest: "{{ target_user_home }}/.local/share/fcitx5/rime/plum"
+    depth: 1
+  environment: "{{ proxy_env }}"
+  become: false
+  tags: [fcitx, rime]
+  ignore_errors: true
+  register: plum_install_result
+
+- name: Deploy rime-ice via plum
+  shell: |
+    export HTTP_PROXY="{{ proxy_env.HTTP_PROXY | default(lookup('env', 'HTTP_PROXY'), true) }}"
+    export HTTPS_PROXY="{{ proxy_env.HTTPS_PROXY | default(lookup('env', 'HTTPS_PROXY'), true) }}"
+    export http_proxy="{{ proxy_env.http_proxy | default(lookup('env', 'http_proxy'), true) }}"
+    export https_proxy="{{ proxy_env.https_proxy | default(lookup('env', 'https_proxy'), true) }}"
+    git config --global http.proxy "$HTTP_PROXY"
+    git config --global https.proxy "$HTTPS_PROXY"
+    cd "{{ target_user_home }}/.local/share/fcitx5/rime/plum"
+    bash rime-install {{ rime_ice_recipe }}
+  args:
+    creates: "{{ target_user_home }}/.config/fcitx5/rime/default.custom.yaml"
+  become: false
+  changed_when: false
+  tags: [fcitx, rime]
+  when: plum_install_result is succeeded
+
+- name: Configure environment variables in .profile
+  lineinfile:
+    path: "{{ target_user_home }}/.profile"
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "export XMODIFIERS=@im=fcitx"
+    - "export GTK_IM_MODULE=fcitx"
+    - "export QT_IM_MODULE=fcitx"
+  become: false
+  tags: [fcitx, rime]
+
+- name: Ensure Hyprland config directory exists
+  file:
+    path: "{{ target_user_home }}/.config/hypr"
+    state: directory
+    mode: '0755'
+  become: false
+  tags: [fcitx, rime]
+
+- name: Add fcitx5 to Hyprland autostart
+  lineinfile:
+    path: "{{ target_user_home }}/.config/hypr/autostart"
+    line: "exec-once = fcitx5 -d"
+    state: present
+    create: true
+  become: false
+  tags: [fcitx, rime]

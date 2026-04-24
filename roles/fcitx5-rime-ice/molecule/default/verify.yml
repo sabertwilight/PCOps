@@ -1,0 +1,100 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    # 1. Package verification
+    - name: Check fcitx5-rime package installed
+      ansible.builtin.shell: dpkg -l | grep fcitx5-rime
+      register: fcitx5_rime_pkg
+      failed_when: false
+      changed_when: false
+
+    - name: Assert fcitx5-rime is installed
+      ansible.builtin.assert:
+        that:
+          - fcitx5_rime_pkg.stdout | length > 0
+        fail_msg: "fcitx5-rime package not found"
+        success_msg: "fcitx5-rime package installed"
+
+    # 2. Binary verification
+    - name: Check fcitx5 binary exists
+      ansible.builtin.command: which fcitx5
+      register: fcitx5_which
+      failed_when: false
+      changed_when: false
+
+    - name: Assert fcitx5 binary exists
+      ansible.builtin.assert:
+        that:
+          - fcitx5_which.rc == 0
+        fail_msg: "fcitx5 binary not found"
+        success_msg: "fcitx5 binary exists"
+
+    # 3. Directory verification
+    - name: Check Rime config directory exists
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.config/fcitx5/rime"
+      register: rime_config_dir
+
+    - name: Assert Rime config directory exists
+      ansible.builtin.assert:
+        that:
+          - rime_config_dir.stat.exists
+          - rime_config_dir.stat.isdir
+        fail_msg: "Rime config directory not found"
+        success_msg: "Rime config directory exists"
+
+    # 4. Environment variables verification
+    - name: Check XMODIFIERS in .profile
+      ansible.builtin.shell: grep -q "XMODIFIERS=@im=fcitx" {{ ansible_env.HOME }}/.profile
+      register: xmodifiers_check
+      failed_when: false
+      changed_when: false
+
+    - name: Assert XMODIFIERS configured
+      ansible.builtin.assert:
+        that:
+          - xmodifiers_check.rc == 0
+        fail_msg: "XMODIFIERS not found in .profile"
+        success_msg: "XMODIFIERS configured in .profile"
+
+    - name: Check GTK_IM_MODULE in .profile
+      ansible.builtin.shell: grep -q "GTK_IM_MODULE=fcitx" {{ ansible_env.HOME }}/.profile
+      register: gtk_im_check
+      failed_when: false
+      changed_when: false
+
+    - name: Assert GTK_IM_MODULE configured
+      ansible.builtin.assert:
+        that:
+          - gtk_im_check.rc == 0
+        fail_msg: "GTK_IM_MODULE not found in .profile"
+        success_msg: "GTK_IM_MODULE configured in .profile"
+
+    - name: Check QT_IM_MODULE in .profile
+      ansible.builtin.shell: grep -q "QT_IM_MODULE=fcitx" {{ ansible_env.HOME }}/.profile
+      register: qt_im_check
+      failed_when: false
+      changed_when: false
+
+    - name: Assert QT_IM_MODULE configured
+      ansible.builtin.assert:
+        that:
+          - qt_im_check.rc == 0
+        fail_msg: "QT_IM_MODULE not found in .profile"
+        success_msg: "QT_IM_MODULE configured in .profile"
+
+    # 5. Hyprland autostart verification
+    - name: Check Hyprland autostart for fcitx5
+      ansible.builtin.shell: grep -q "fcitx5" {{ ansible_env.HOME }}/.config/hypr/autostart
+      register: autostart_check
+      failed_when: false
+      changed_when: false
+
+    - name: Assert fcitx5 autostart configured
+      ansible.builtin.assert:
+        that:
+          - autostart_check.rc == 0
+        fail_msg: "fcitx5 not found in Hyprland autostart"
+        success_msg: "fcitx5 autostart configured"

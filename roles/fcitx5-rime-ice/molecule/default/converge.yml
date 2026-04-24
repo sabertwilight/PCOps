@@ -1,0 +1,33 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: true
+  vars:
+    target_user: root
+    target_user_home: "{{ ansible_env.HOME }}"
+    proxy_env: {}
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install git and fcitx5 packages
+      ansible.builtin.apt:
+        name:
+          - git
+          - fcitx5
+          - fcitx5-rime
+          - fcitx5-configtool
+        state: present
+
+    - name: Create Rime config directory
+      file:
+        path: "{{ target_user_home }}/.config/fcitx5/rime"
+        state: directory
+        mode: '0755'
+
+    - name: Include fcitx5-rime-ice role
+      include_role:
+        name: fcitx5-rime-ice

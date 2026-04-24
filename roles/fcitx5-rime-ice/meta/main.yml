@@ -1,0 +1,12 @@
+---
+# fcitx5-rime-ice role metadata
+galaxy_info:
+  role_name: fcitx5_rime_ice
+  namespace: kool
+  version: 1.0.0
+  description: Install fcitx5 + rime-ice (雾凇拼音) on Ubuntu 24.04
+  license: MIT
+
+dependencies:
+  - role: proxy
+    when: configure_proxy | default(false)

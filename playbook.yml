@@ -124,6 +124,10 @@
       when: install_jq
       tags: [jq, optional]
 
+    - role: fcitx5-rime-ice
+      when: install_fcitx5_rime_ice
+      tags: [fcitx, rime, optional]
+
     # Phase 5: 最终验证
     - role: final-check
       tags: [verify, always]
