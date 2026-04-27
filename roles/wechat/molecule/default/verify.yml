@@ -1,0 +1,18 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check WeChat binary exists (Linux)
+      ansible.builtin.stat:
+        path: /usr/bin/weixin
+      register: wechat_binary
+      when: ansible_system == "Linux"
+
+    - name: Assert WeChat binary exists (Linux)
+      ansible.builtin.assert:
+        that:
+          - wechat_binary.stat.exists
+        fail_msg: "WeChat binary not found at /usr/bin/weixin"
+        success_msg: "WeChat binary exists"
+      when: ansible_system == "Linux"

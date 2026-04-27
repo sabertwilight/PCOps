@@ -1,0 +1,5 @@
+---
+# wechat role defaults
+
+# Proxy settings (inherited from all.yml via configure_proxy)
+# Do not set proxy variables here
