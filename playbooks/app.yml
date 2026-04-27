@@ -9,6 +9,7 @@
 
 - name: Install Applications
   hosts: localhost
+  become: false
   gather_facts: true
 
   vars:
@@ -16,6 +17,17 @@
     target_user_home: "{{ ansible_env.HOME }}"
 
   roles:
+    # System Tools
+    - role: fcitx5-rime-ice
+      tags: [dev, app]
+
+    # Browser
+    - role: google-chrome
+      tags: [dev, app]
+
+    - role: microsoft-edge
+      tags: [dev, app]
+
     # 开发工具
     - role: vscode
       tags: [dev, app]
@@ -30,6 +42,13 @@
     - role: yq
       tags: [util, app]
 
+    - role: fastfetch
+      tags: [util, app, fastfetch]
+
+    - role: docker
+      tags: [util, app, docker]
+      become: true
+
     # 应用
     - role: cherrystudio
       tags: [app, ai]
@@ -40,9 +59,16 @@
     - role: drawio
       tags: [app, diagram]
 
-    - role: wps
-      tags: [app, office]
+    - role: dida
+      tags: [dida]
+
+    - role: wechat
+      tags: [app, chat]
+
+        #    - role: wps
+        #      tags: [app, office]
 
     # 终端
-    - role: kitty
-      tags: [app, terminal]
+    #    - role: kitty
+    #      tags: [app, terminal]
+

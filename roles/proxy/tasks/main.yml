@@ -42,11 +42,13 @@
           {% endif %}
         dest: /etc/apt/apt.conf.d/95proxies
         mode: '0644'
+      become: true
       tags: proxy
 
     - name: Update apt cache with proxy
       apt:
         update_cache: true
+      become: true
       tags: proxy
 
 - name: Remove apt proxy configuration
@@ -54,6 +56,7 @@
   file:
     path: /etc/apt/apt.conf.d/95proxies
     state: absent
+  become: true
   tags: proxy
 
 # ===========================================

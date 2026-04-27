@@ -20,6 +20,13 @@
     - ansible_system == "Linux"
     - edge_binary_linux.stat.exists
 
+- name: Set proxy environment
+  set_fact:
+    edge_proxy_env:
+      http_proxy: "{{ proxy_http }}"
+      https_proxy: "{{ proxy_https }}"
+  when: configure_proxy | default(false)
+
 - name: Install Microsoft Edge (Ubuntu/Debian)
   when:
     - ansible_system == "Linux"
@@ -32,38 +39,47 @@
           - gpg
           - curl
         state: present
-      environment:
-        http_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
-        https_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
+
+    - name: Verify Microsoft Edge GPG key is valid
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/microsoft-edge.gpg
+      register: edge_gpg_key
+
+    - name: Remove invalid GPG key if empty or corrupted
+      ansible.builtin.file:
+        path: /usr/share/keyrings/microsoft-edge.gpg
+        state: absent
+      when: not edge_gpg_key.stat.exists or edge_gpg_key.stat.size == 0
 
     - name: Download and dearmor Microsoft GPG key
       ansible.builtin.shell: |
         curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-edge.gpg
       args:
         creates: /usr/share/keyrings/microsoft-edge.gpg
-      environment:
-        http_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
-        https_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
+      environment: "{{ edge_proxy_env | default({}) }}"
 
     - name: Set GPG key permissions
       ansible.builtin.file:
         path: /usr/share/keyrings/microsoft-edge.gpg
         mode: "0644"
+      when: edge_gpg_key.stat.exists and edge_gpg_key.stat.size > 0
 
     - name: Add Microsoft Edge APT repository
       ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-edge.gpg] https://packages.microsoft.com/repos/edge stable main"
         filename: microsoft-edge
         state: present
-        update_cache: yes
+
+    - name: Update APT cache
+      ansible.builtin.command: apt-get update
+      changed_when: false
 
     - name: Install Microsoft Edge package
       ansible.builtin.apt:
         name: microsoft-edge-stable
         state: present
-      environment:
-        http_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
-        https_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
+        update_cache: yes
+      environment: "{{ edge_proxy_env | default({}) }}"
 
 - name: Install Microsoft Edge (macOS)
   when:
@@ -78,9 +94,7 @@
     - name: Install Microsoft Edge via Homebrew cask
       ansible.builtin.command:
         cmd: /opt/homebrew/bin/brew install --cask microsoft-edge
-      environment:
-        http_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
-        https_proxy: "http://{{ microsoft_edge_proxy_host }}:{{ microsoft_edge_proxy_port }}"
+      environment: "{{ edge_proxy_env | default({}) }}"
       when: homebrew_check.stat.exists
       changed_when: true
 

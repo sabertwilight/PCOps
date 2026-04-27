@@ -10,7 +10,7 @@
 
 - name: Install Hyprland on Ubuntu 24.04
   hosts: localhost
-  become: true
+    #  become: true
   gather_facts: true
 
   pre_tasks:

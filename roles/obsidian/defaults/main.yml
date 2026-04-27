@@ -1,8 +1,7 @@
 ---
+# obsidian role defaults
+
 obsidian_version: "1.12.7"
 
-# Proxy settings (optional)
-# For Docker Molecule tests, use Docker bridge gateway IP (172.17.0.1)
-# For real hosts, use 127.0.0.1 or actual IP
-obsidian_proxy_host: "172.17.0.1"
-obsidian_proxy_port: "7890"
+# Proxy settings (inherited from all.yml via configure_proxy)
+# Do not set proxy variables here

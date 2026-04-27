@@ -95,11 +95,11 @@ login_manager_detected: false
 # 代理配置 (中国大陆用户需要配置)
 # ===========================================
 # 启用代理配置
-configure_proxy: false
+configure_proxy: true
 
 # apt 代理配置 (会写入 /etc/apt/apt.conf.d/95proxies)
-apt_proxy_http: ""
-apt_proxy_https: ""
+apt_proxy_http: "http://127.0.0.1:7890"
+apt_proxy_https: "http://127.0.0.1:7890"
 
 # 环境变量代理 (用于 git, curl, npm, cargo 等)
 # 留空则自动从环境变量读取

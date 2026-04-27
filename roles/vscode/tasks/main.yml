@@ -20,6 +20,13 @@
     - ansible_system == "Linux"
     - vscode_binary_linux.stat.exists
 
+- name: Set proxy environment
+  set_fact:
+    vscode_proxy_env:
+      http_proxy: "{{ proxy_http }}"
+      https_proxy: "{{ proxy_https }}"
+  when: configure_proxy | default(false)
+
 - name: Install VS Code (Ubuntu/Debian)
   when:
     - ansible_system == "Linux"
@@ -32,38 +39,47 @@
           - gpg
           - curl
         state: present
-      environment:
-        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
-        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+
+    - name: Verify Microsoft GPG key is valid
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/microsoft.gpg
+      register: vscode_gpg_key
+
+    - name: Remove invalid GPG key if empty or corrupted
+      ansible.builtin.file:
+        path: /usr/share/keyrings/microsoft.gpg
+        state: absent
+      when: not vscode_gpg_key.stat.exists or vscode_gpg_key.stat.size == 0
 
     - name: Download and dearmor Microsoft GPG key
       ansible.builtin.shell: |
         curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg
       args:
         creates: /usr/share/keyrings/microsoft.gpg
-      environment:
-        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
-        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+      environment: "{{ vscode_proxy_env | default({}) }}"
 
     - name: Set GPG key permissions
       ansible.builtin.file:
         path: /usr/share/keyrings/microsoft.gpg
         mode: "0644"
+      when: vscode_gpg_key.stat.exists and vscode_gpg_key.stat.size > 0
 
     - name: Add VS Code APT repository
       ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
         filename: vscode
         state: present
-        update_cache: yes
+
+    - name: Update APT cache
+      ansible.builtin.command: apt-get update
+      changed_when: false
 
     - name: Install VS Code package
       ansible.builtin.apt:
         name: code
         state: present
-      environment:
-        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
-        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+        update_cache: yes
+      environment: "{{ vscode_proxy_env | default({}) }}"
 
 - name: Install VS Code (macOS)
   when:
@@ -78,9 +94,7 @@
     - name: Install VS Code via Homebrew cask
       ansible.builtin.command:
         cmd: /opt/homebrew/bin/brew install --cask visual-studio-code
-      environment:
-        http_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
-        https_proxy: "http://{{ vscode_proxy_host }}:{{ vscode_proxy_port }}"
+      environment: "{{ vscode_proxy_env | default({}) }}"
       when: homebrew_check.stat.exists
       changed_when: true
 

@@ -40,6 +40,17 @@
           - curl
         state: present
 
+    - name: Verify Google Chrome GPG key is valid
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/google-chrome.gpg
+      register: chrome_gpg_key
+
+    - name: Remove invalid GPG key if empty or corrupted
+      ansible.builtin.file:
+        path: /usr/share/keyrings/google-chrome.gpg
+        state: absent
+      when: not chrome_gpg_key.stat.exists or chrome_gpg_key.stat.size == 0
+
     - name: Download and dearmor Google Chrome GPG key
       ansible.builtin.shell: |
         curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
@@ -51,6 +62,7 @@
       ansible.builtin.file:
         path: /usr/share/keyrings/google-chrome.gpg
         mode: "0644"
+      when: chrome_gpg_key.stat.exists and chrome_gpg_key.stat.size > 0
 
     - name: Add Google Chrome APT repository
       ansible.builtin.apt_repository:

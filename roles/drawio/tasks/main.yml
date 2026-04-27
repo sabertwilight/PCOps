@@ -11,6 +11,13 @@
   register: drawio_binary_macos
   when: ansible_system == "Darwin"
 
+- name: Set proxy environment
+  set_fact:
+    drawio_proxy_env:
+      http_proxy: "{{ proxy_http }}"
+      https_proxy: "{{ proxy_https }}"
+  when: configure_proxy | default(false)
+
 - name: Install Draw.io (Ubuntu/Debian)
   when:
     - ansible_system == "Linux"
@@ -20,18 +27,14 @@
     - name: Download Draw.io deb package
       ansible.builtin.command:
         cmd: curl -fsSL https://github.com/jgraph/drawio-desktop/releases/download/v{{ drawio_version }}/drawio-amd64-{{ drawio_version }}.deb -o /tmp/drawio.deb
-      environment:
-        http_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
-        https_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+      environment: "{{ drawio_proxy_env | default({}) }}"
       changed_when: true
 
     - name: Install Draw.io deb package
       ansible.builtin.apt:
         deb: /tmp/drawio.deb
         state: present
-      environment:
-        http_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
-        https_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+      environment: "{{ drawio_proxy_env | default({}) }}"
 
     - name: Clean up deb package
       ansible.builtin.file:
@@ -51,9 +54,7 @@
     - name: Install Draw.io via Homebrew cask
       ansible.builtin.command:
         cmd: /opt/homebrew/bin/brew install --cask drawio
-      environment:
-        http_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
-        https_proxy: "http://{{ drawio_proxy_host }}:{{ drawio_proxy_port }}"
+      environment: "{{ drawio_proxy_env | default({}) }}"
       when: homebrew_check.stat.exists
       changed_when: true
 

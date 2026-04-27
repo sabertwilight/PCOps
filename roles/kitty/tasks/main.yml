@@ -1,4 +1,11 @@
 ---
+- name: Set proxy environment
+  set_fact:
+    kitty_proxy_env:
+      http_proxy: "{{ proxy_http }}"
+      https_proxy: "{{ proxy_https }}"
+  when: configure_proxy | default(false)
+
 - name: Check if kitty is installed
   ansible.builtin.command: kitty --version
   register: kitty_installed_version
@@ -18,9 +25,7 @@
 - name: Download kitty installer
   ansible.builtin.command:
     cmd: curl -fsSL https://sw.kovidgoyal.net/kitty/installer.sh -o /tmp/kitty-installer.sh
-  environment:
-    http_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
-    https_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+  environment: "{{ kitty_proxy_env | default({}) }}"
   when: kitty_current_version != kitty_version
   changed_when: true
 
@@ -35,8 +40,8 @@
     cmd: /tmp/kitty-installer.sh dest=/opt launch=n installer=version-{{ kitty_version }}
   environment:
     PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    http_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
-    https_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+    http_proxy: "{{ proxy_http }}"
+    https_proxy: "{{ proxy_https }}"
   when:
     - kitty_current_version != kitty_version
     - ansible_system == "Linux"
@@ -45,9 +50,7 @@
 - name: Install kitty (macOS)
   ansible.builtin.command:
     cmd: /tmp/kitty-installer.sh launch=n installer=version-{{ kitty_version }}
-  environment:
-    http_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
-    https_proxy: "http://{{ kitty_proxy_host }}:{{ kitty_proxy_port }}"
+  environment: "{{ kitty_proxy_env | default({}) }}"
   when:
     - kitty_current_version != kitty_version
     - ansible_system == "Darwin"
