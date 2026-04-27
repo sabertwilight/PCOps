@@ -1,0 +1,7 @@
+---
+# dida role defaults
+
+dida_version: "latest"
+
+# Proxy settings (inherited from all.yml via configure_proxy)
+# Do not set proxy variables here
