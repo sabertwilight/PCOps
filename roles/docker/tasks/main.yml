@@ -1,0 +1,68 @@
+---
+- name: Check if Docker is installed
+  ansible.builtin.command:
+    cmd: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+  when: ansible_os_family == "Debian"
+
+- name: Set proxy environment
+  set_fact:
+    docker_proxy_env:
+      http_proxy: "{{ proxy_http | default('') }}"
+      https_proxy: "{{ proxy_https | default('') }}"
+      no_proxy: "{{ proxy_no_proxy | default('') }}"
+  when: configure_proxy | default(false)
+
+- name: Install prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+  environment: "{{ docker_proxy_env | default({}) }}"
+  when: ansible_os_family == "Debian"
+
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Docker GPG key from Aliyun mirror
+  ansible.builtin.command:
+    cmd: curl -fsSL {{ docker_mirror_url }}/linux/{{ ansible_distribution | lower }}/gpg -o /etc/apt/keyrings/docker.asc
+  environment: "{{ docker_proxy_env | default({}) }}"
+  when: ansible_os_family == "Debian"
+  changed_when: true
+
+- name: Add Docker repository from Aliyun mirror
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] {{ docker_mirror_url }}/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+    filename: docker
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install Docker packages
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+  environment: "{{ docker_proxy_env | default({}) }}"
+  when: ansible_os_family == "Debian"
+
+- name: Ensure Docker service is started and enabled
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add current user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: true
+  when: ansible_user_id != "root"

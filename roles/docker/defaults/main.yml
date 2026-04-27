@@ -1,0 +1,5 @@
+---
+# docker role defaults
+
+docker_version: "latest"
+docker_mirror_url: "https://mirrors.aliyun.com/docker-ce"
