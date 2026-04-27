@@ -35,9 +35,9 @@
     git config --global http.proxy "$HTTP_PROXY"
     git config --global https.proxy "$HTTPS_PROXY"
     cd "{{ target_user_home }}/.local/share/fcitx5/rime/plum"
-    bash rime-install {{ rime_ice_recipe }}
+    rime_frontend=fcitx5-rime bash rime-install {{ rime_ice_recipe }}
   args:
-    creates: "{{ target_user_home }}/.config/fcitx5/rime/default.custom.yaml"
+    creates: "{{ target_user_home }}/.local/share/fcitx5/rime/rime_ice.schema.yaml"
   become: false
   changed_when: false
   tags: [fcitx, rime]
