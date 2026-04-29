@@ -38,6 +38,7 @@
       ansible.builtin.apt:
         deb: /tmp/cherry-studio.deb
         state: present
+      become: true
       environment: "{{ cherrystudio_proxy_env | default({}) }}"
 
     - name: Clean up deb package

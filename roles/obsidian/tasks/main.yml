@@ -34,6 +34,7 @@
       ansible.builtin.apt:
         deb: /tmp/obsidian.deb
         state: present
+      become: true
       environment: "{{ obsidian_proxy_env | default({}) }}"
 
     - name: Clean up deb package

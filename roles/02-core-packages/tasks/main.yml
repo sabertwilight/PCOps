@@ -7,18 +7,21 @@
     name: "{{ conflicting_packages }}"
     state: absent
     purge: true
+  become: true
   tags: packages
 
 - name: Install core packages
   apt:
     name: "{{ core_packages }}"
     state: present
+  become: true
   tags: packages
 
 - name: Install optional packages
   apt:
     name: "{{ optional_packages }}"
     state: present
+  become: true
   tags: packages
 
 - name: Force reinstall specific packages
@@ -26,6 +29,7 @@
     name: "{{ force_reinstall_packages }}"
     state: latest
     force: true
+  become: true
   tags: packages
 
 - name: Make brightnessctl work without sudo
@@ -34,5 +38,6 @@
     mode: 'u+s'
   loop:
     - /usr/bin/brightnessctl
+  become: true
   failed_when: false
   tags: packages

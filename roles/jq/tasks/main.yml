@@ -46,6 +46,7 @@
     dest: /usr/local/bin/jq
     mode: '0755'
     remote_src: true
+  become: true
   when:
     - ansible_system == "Linux"
     - not jq_installed_linux.stat.exists

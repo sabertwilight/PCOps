@@ -6,12 +6,14 @@
   apt:
     name: "{{ ags_packages }}"
     state: present
+  become: true
   tags: ags
 
 - name: Install build dependencies for pam
   apt:
     name: pam
     state: build-dep
+  become: true
   tags: ags
 
 - name: Install TypeScript globally
@@ -19,6 +21,7 @@
     name: typescript
     global: true
     state: present
+  become: true
   environment: "{{ proxy_env }}"
   tags: ags
 
@@ -36,7 +39,6 @@
     force: true
   environment: "{{ proxy_env }}"
   when: not ags_installed.stat.exists
-  become: false
   tags: ags
 
 - name: Build and install AGS
@@ -46,7 +48,6 @@
       args:
         chdir: "{{ cache_dir }}/git/ags"
       environment: "{{ proxy_env }}"
-      become: false
 
     - name: Setup meson build
       command: meson setup build
@@ -58,6 +59,7 @@
       command: meson install -C build
       args:
         chdir: "{{ cache_dir }}/git/ags"
+      become: true
   when: not ags_installed.stat.exists
   tags: ags
 
@@ -82,4 +84,5 @@
       exec /usr/bin/gjs -m "$MAIN_JS" "$@"
     dest: /usr/local/bin/ags
     mode: '0755'
+  become: true
   tags: ags

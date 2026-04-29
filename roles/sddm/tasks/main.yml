@@ -7,12 +7,14 @@
     name: "{{ sddm_packages }}"
     state: present
     install_recommends: false
+  become: true
   tags: sddm
 
 - name: Install SDDM extra packages
   apt:
     name: "{{ sddm_extra_packages }}"
     state: present
+  become: true
   tags: sddm
 
 - name: Disable other login managers
@@ -21,6 +23,7 @@
     enabled: false
     state: stopped
   loop: "{{ login_managers_to_disable }}"
+  become: true
   failed_when: false
   tags: sddm
 
@@ -28,6 +31,7 @@
   systemd:
     name: sddm
     enabled: true
+  become: true
   tags: sddm
 
 - name: Ensure wayland-sessions directory exists
@@ -35,6 +39,7 @@
     path: /usr/share/wayland-sessions
     state: directory
     mode: '0755'
+  become: true
   tags: sddm
 
 - name: Copy Hyprland desktop entry
@@ -42,6 +47,7 @@
     src: assets/hyprland.desktop
     dest: /usr/share/wayland-sessions/hyprland.desktop
     mode: '0644'
+  become: true
   tags: sddm
 
 # SDDM 主题安装
@@ -53,12 +59,14 @@
         path: /usr/share/sddm/themes
         state: directory
         mode: '0755'
+      become: true
       tags: sddm
 
     - name: Remove existing theme directory
       file:
         path: "/usr/share/sddm/themes/{{ sddm_theme_name }}"
         state: absent
+      become: true
       tags: sddm
 
     - name: Clone SDDM theme
@@ -70,6 +78,7 @@
 
     - name: Move theme to SDDM themes directory
       command: mv /tmp/{{ sddm_theme_name }} /usr/share/sddm/themes/
+      become: true
       tags: sddm
 
     - name: Ensure SDDM config directory exists
@@ -77,6 +86,7 @@
         path: /etc/sddm.conf.d
         state: directory
         mode: '0755'
+      become: true
       tags: sddm
 
     - name: Configure SDDM theme
@@ -86,4 +96,5 @@
           Current={{ sddm_theme_name }}
         dest: /etc/sddm.conf.d/theme.conf.user
         mode: '0644'
+      become: true
       tags: sddm

@@ -23,6 +23,7 @@
       - gnupg
     state: present
     update_cache: true
+  become: true
   environment: "{{ docker_proxy_env | default({}) }}"
   when: ansible_os_family == "Debian"
 
@@ -31,10 +32,12 @@
     path: /etc/apt/keyrings
     state: directory
     mode: "0755"
+  become: true
 
 - name: Download Docker GPG key from Aliyun mirror
   ansible.builtin.command:
     cmd: curl -fsSL {{ docker_mirror_url }}/linux/{{ ansible_distribution | lower }}/gpg -o /etc/apt/keyrings/docker.asc
+  become: true
   environment: "{{ docker_proxy_env | default({}) }}"
   when: ansible_os_family == "Debian"
   changed_when: true
@@ -44,6 +47,7 @@
     repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] {{ docker_mirror_url }}/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
     filename: docker
     state: present
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Install Docker packages
@@ -51,6 +55,7 @@
     name: "{{ docker_packages }}"
     state: present
     update_cache: true
+  become: true
   environment: "{{ docker_proxy_env | default({}) }}"
   when: ansible_os_family == "Debian"
 
@@ -59,10 +64,12 @@
     name: docker
     state: started
     enabled: true
+  become: true
 
 - name: Add current user to docker group
   ansible.builtin.user:
     name: "{{ ansible_user_id }}"
     groups: docker
     append: true
+  become: true
   when: ansible_user_id != "root"

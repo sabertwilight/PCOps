@@ -49,12 +49,14 @@
   apt:
     update_cache: true
     cache_valid_time: 3600
+  become: true
   tags: prerequisites
 
 - name: Install prerequisite packages
   apt:
     name: "{{ prerequisites_packages }}"
     state: present
+  become: true
   tags: prerequisites
 
 - name: Install build dependencies
@@ -62,6 +64,7 @@
     name: "{{ item }}"
     state: build-dep
   loop: "{{ build_dependencies }}"
+  become: true
   tags: prerequisites
 
 - name: Add user to input group
@@ -69,6 +72,7 @@
     name: "{{ target_user }}"
     groups: input
     append: true
+  become: true
   when: add_user_to_input_group
   tags: prerequisites
 
@@ -97,13 +101,11 @@
   args:
     creates: "{{ target_user_home }}/.cargo/bin/cargo"
   environment: "{{ proxy_env }}"
-  become: false
   tags: prerequisites
 
 - name: Source Rust environment
   shell: source {{ target_user_home }}/.cargo/env
   args:
     executable: /bin/bash
-  become: false
   changed_when: false
   tags: prerequisites

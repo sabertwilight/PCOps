@@ -39,6 +39,7 @@
           - gpg
           - curl
         state: present
+      become: true
 
     - name: Verify Microsoft Edge GPG key is valid
       ansible.builtin.stat:
@@ -49,6 +50,7 @@
       ansible.builtin.file:
         path: /usr/share/keyrings/microsoft-edge.gpg
         state: absent
+      become: true
       when: not edge_gpg_key.stat.exists or edge_gpg_key.stat.size == 0
 
     - name: Download and dearmor Microsoft GPG key
@@ -56,12 +58,14 @@
         curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-edge.gpg
       args:
         creates: /usr/share/keyrings/microsoft-edge.gpg
+      become: true
       environment: "{{ edge_proxy_env | default({}) }}"
 
     - name: Set GPG key permissions
       ansible.builtin.file:
         path: /usr/share/keyrings/microsoft-edge.gpg
         mode: "0644"
+      become: true
       when: edge_gpg_key.stat.exists and edge_gpg_key.stat.size > 0
 
     - name: Add Microsoft Edge APT repository
@@ -69,9 +73,11 @@
         repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-edge.gpg] https://packages.microsoft.com/repos/edge stable main"
         filename: microsoft-edge
         state: present
+      become: true
 
     - name: Update APT cache
       ansible.builtin.command: apt-get update
+      become: true
       changed_when: false
 
     - name: Install Microsoft Edge package
@@ -79,6 +85,7 @@
         name: microsoft-edge-stable
         state: present
         update_cache: yes
+      become: true
       environment: "{{ edge_proxy_env | default({}) }}"
 
 - name: Install Microsoft Edge (macOS)

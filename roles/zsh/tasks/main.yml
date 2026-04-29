@@ -6,6 +6,7 @@
   apt:
     name: "{{ zsh_packages }}"
     state: present
+  become: true
   tags: zsh
 
 - name: Install Oh My Zsh
@@ -13,7 +14,6 @@
   args:
     creates: "{{ target_user_home }}/.oh-my-zsh"
   environment: "{{ proxy_env }}"
-  become: false
   tags: zsh
 
 - name: Install Zsh plugins
@@ -23,7 +23,6 @@
     depth: 1
   environment: "{{ proxy_env }}"
   loop: "{{ zsh_plugins }}"
-  become: false
   tags: zsh
 
 - name: Backup existing .zshrc
@@ -32,7 +31,6 @@
     dest: "{{ target_user_home }}/.zshrc-backup"
     remote_src: true
   when: ansible_env.HOME + '/.zshrc' is exists
-  become: false
   tags: zsh
 
 - name: Backup existing .zprofile
@@ -41,7 +39,6 @@
     dest: "{{ target_user_home }}/.zprofile-backup"
     remote_src: true
   when: ansible_env.HOME + '/.zprofile' is exists
-  become: false
   tags: zsh
 
 - name: Copy Zsh configuration
@@ -49,7 +46,6 @@
     src: "assets/.zshrc"
     dest: "{{ target_user_home }}/.zshrc"
     mode: '0644'
-  become: false
   tags: zsh
 
 - name: Copy Zsh profile
@@ -57,7 +53,6 @@
     src: "assets/.zprofile"
     dest: "{{ target_user_home }}/.zprofile"
     mode: '0644'
-  become: false
   tags: zsh
 
 - name: Copy additional Zsh themes
@@ -65,13 +60,13 @@
     src: "assets/add_zsh_theme/"
     dest: "{{ target_user_home }}/.oh-my-zsh/themes/"
     mode: '0644'
-  become: false
   tags: zsh
 
 - name: Change default shell to Zsh
   user:
     name: "{{ target_user }}"
     shell: /usr/bin/zsh
+  become: true
   tags: zsh
 
 # Fastfetch 安装
@@ -98,6 +93,7 @@
   apt:
     deb: "/tmp/fastfetch-linux-amd64.deb"
     state: present
+  become: true
   when: fastfetch_url.stdout | length > 0
   tags: zsh
 
@@ -106,7 +102,6 @@
     src: "assets/fastfetch/"
     dest: "{{ target_user_home }}/.config/fastfetch/"
     mode: 'preserve'
-  become: false
   tags: zsh
 
 # Pokemon color scripts
@@ -118,7 +113,6 @@
     force: true
   environment: "{{ proxy_env }}"
   when: install_pokemon_scripts
-  become: false
   tags: [zsh, pokemon]
 
 - name: Install Pokemon color scripts
@@ -127,6 +121,7 @@
     ./install.sh
   args:
     creates: /usr/local/bin/pokemon-colorscripts
+  become: true
   when: install_pokemon_scripts
   tags: [zsh, pokemon]
 
@@ -137,5 +132,4 @@
     line: 'pokemon-colorscripts --no-title -s -r | fastfetch -c $HOME/.config/fastfetch/config-pokemon.jsonc --logo-type file-raw --logo-height 10 --logo-width 5 --logo'
     state: present
   when: install_pokemon_scripts
-  become: false
   tags: [zsh, pokemon]

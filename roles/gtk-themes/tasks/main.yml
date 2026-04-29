@@ -6,6 +6,7 @@
   apt:
     name: "{{ gtk_theme_packages }}"
     state: present
+  become: true
   tags: gtk
 
 - name: Clone GTK themes repository
@@ -15,7 +16,6 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: gtk
 
 - name: Extract GTK themes and icons
@@ -25,7 +25,6 @@
     ./auto-extract.sh
   args:
     creates: "{{ target_user_home }}/.themes/Andromeda-dark"
-  become: false
   tags: gtk
 
 - name: Ensure ~/.icons directory exists
@@ -33,7 +32,6 @@
     path: "{{ target_user_home }}/.icons/default"
     state: directory
     mode: "0755"
-  become: false
   tags: gtk
 
 - name: Create cursor theme index to prevent circular Inherits
@@ -45,12 +43,10 @@
       Comment=Default Cursor Theme
       Inherits={{ cursor_theme_name }}
     mode: "0644"
-  become: false
   tags: gtk
 
 - name: Set cursor theme in gsettings
   dconf:
     key: "/org/gnome/desktop/interface/cursor-theme"
     value: "'{{ cursor_theme_name }}'"
-  become: false
   tags: gtk

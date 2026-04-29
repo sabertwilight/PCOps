@@ -6,6 +6,7 @@
   apt:
     name: software-properties-common
     state: present
+  become: true
   tags: hyprland
 
 - name: Add Hyprland PPA
@@ -13,12 +14,14 @@
     repo: "{{ hyprland_ppa }}"
     state: present
     update_cache: true
+  become: true
   tags: hyprland
 
 - name: Install Hyprland from PPA
   apt:
     name: "{{ hyprland_ppa_packages }}"
     state: present
+  become: true
   tags: hyprland
 
 - name: Ensure wayland-sessions directory exists
@@ -26,6 +29,7 @@
     path: /usr/share/wayland-sessions
     state: directory
     mode: '0755'
+  become: true
   tags: hyprland
 
 - name: Copy Hyprland desktop entry
@@ -33,4 +37,5 @@
     src: assets/hyprland.desktop
     dest: /usr/share/wayland-sessions/hyprland.desktop
     mode: '0644'
+  become: true
   tags: hyprland

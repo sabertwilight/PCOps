@@ -70,7 +70,6 @@
         name: http.proxy
         scope: global
         value: "{{ final_http_proxy }}"
-      become: false
       tags: proxy
 
     - name: Set git https proxy
@@ -78,7 +77,6 @@
         name: https.proxy
         scope: global
         value: "{{ final_https_proxy | default(final_http_proxy, true) }}"
-      become: false
       tags: proxy
 
 - name: Remove git proxy configuration
@@ -89,7 +87,6 @@
         name: http.proxy
         scope: global
         state: absent
-      become: false
       failed_when: false
       tags: proxy
 
@@ -98,7 +95,6 @@
         name: https.proxy
         scope: global
         state: absent
-      become: false
       failed_when: false
       tags: proxy
 

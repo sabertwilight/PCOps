@@ -6,6 +6,7 @@
   apt:
     name: "{{ build_tool_dependencies }}"
     state: present
+  become: true
   tags: build-tools
 
 # ===========================================
@@ -19,14 +20,12 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: [build-tools, wallust]
 
 - name: Check if wallust is installed
   stat:
     path: "{{ target_user_home }}/.cargo/bin/wallust"
   register: wallust_installed
-  become: false
   tags: [build-tools, wallust]
 
 - name: Build and install wallust
@@ -39,7 +38,6 @@
     executable: /bin/bash
   environment: "{{ proxy_env }}"
   when: not wallust_installed.stat.exists
-  become: false
   tags: [build-tools, wallust]
 
 # ===========================================
@@ -53,14 +51,12 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: [build-tools, swww]
 
 - name: Check if swww is installed
   stat:
     path: "{{ target_user_home }}/.cargo/bin/swww"
   register: swww_installed
-  become: false
   tags: [build-tools, swww]
 
 - name: Build and install swww
@@ -73,7 +69,6 @@
     executable: /bin/bash
   environment: "{{ proxy_env }}"
   when: not swww_installed.stat.exists
-  become: false
   tags: [build-tools, swww]
 
 # ===========================================
@@ -110,6 +105,7 @@
     ninja -C build install
   args:
     creates: /usr/local/bin/rofi
+  become: true
   when: not rofi_installed.stat.exists
   tags: [build-tools, rofi]
 
@@ -124,7 +120,6 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: [build-tools, swappy]
 
 - name: Check if swappy is installed
@@ -141,6 +136,7 @@
     ninja -C build install
   args:
     creates: /usr/local/bin/swappy
+  become: true
   when: not swappy_installed.stat.exists
   tags: [build-tools, swappy]
 
@@ -155,7 +151,6 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   when: install_nwg_look
   tags: [build-tools, nwg-look]
 
@@ -176,6 +171,7 @@
     executable: /bin/bash
     creates: /usr/local/bin/nwg-look
   environment: "{{ proxy_env }}"
+  become: true
   when:
     - install_nwg_look
     - not nwg_look_installed.stat.exists
@@ -192,7 +188,6 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: [build-tools, nwg-displays]
 
 - name: Check if nwg-displays is installed
@@ -207,5 +202,6 @@
     ./install.sh
   args:
     creates: /usr/local/bin/nwg-displays
+  become: true
   when: not nwg_displays_installed.stat.exists
   tags: [build-tools, nwg-displays]

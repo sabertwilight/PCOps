@@ -6,12 +6,14 @@
   apt:
     name: "{{ rog_packages }}"
     state: present
+  become: true
   tags: rog
 
 - name: Enable power-profiles-daemon
   systemd:
     name: power-profiles-daemon
     enabled: true
+  become: true
   tags: rog
 
 # asusctl
@@ -22,7 +24,6 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: [rog, asusctl]
 
 - name: Check if asusctl is installed
@@ -41,6 +42,7 @@
     executable: /bin/bash
     creates: /usr/local/bin/asusctl
   environment: "{{ proxy_env }}"
+  become: true
   when: not asusctl_installed.stat.exists
   tags: [rog, asusctl]
 
@@ -52,7 +54,6 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: [rog, supergfxctl]
 
 - name: Check if supergfxctl is installed
@@ -71,6 +72,7 @@
     executable: /bin/bash
     creates: /usr/local/bin/supergfxctl
   environment: "{{ proxy_env }}"
+  become: true
   when: not supergfxctl_installed.stat.exists
   tags: [rog, supergfxctl]
 
@@ -79,4 +81,5 @@
     name: supergfxd
     enabled: true
     state: started
+  become: true
   tags: [rog, supergfxctl]

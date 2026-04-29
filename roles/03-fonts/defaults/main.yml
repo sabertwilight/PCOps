@@ -20,3 +20,7 @@ nerd_fonts:
     url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/FantasqueSansMono.zip"
     filename: FantasqueSansMono.zip
     dest: "{{ target_user_home }}/.local/share/fonts/FantasqueSansMono"
+  - name: FiraCode
+    url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/FiraCode.zip"
+    filename: FiraCode.zip
+    dest: "{{ target_user_home }}/.local/share/fonts/FiraCode"

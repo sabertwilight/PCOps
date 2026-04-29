@@ -48,6 +48,7 @@
       - --strip-components=1
     remote_src: true
     creates: /usr/local/bin/yq_linux_{{ yq_arch }}
+  become: true
   when:
     - ansible_system == "Linux"
     - not yq_installed_linux.stat.exists
@@ -56,6 +57,7 @@
   command:
     cmd: mv /usr/local/bin/yq_linux_{{ yq_arch }} /usr/local/bin/yq
     removes: /usr/local/bin/yq_linux_{{ yq_arch }}
+  become: true
   when:
     - ansible_system == "Linux"
     - not yq_installed_linux.stat.exists
@@ -64,6 +66,7 @@
   file:
     path: /usr/local/bin/yq
     mode: '0755'
+  become: true
   when:
     - ansible_system == "Linux"
     - not yq_installed_linux.stat.exists

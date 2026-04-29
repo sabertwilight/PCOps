@@ -42,6 +42,7 @@
     PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     http_proxy: "{{ proxy_http }}"
     https_proxy: "{{ proxy_https }}"
+  become: true
   when:
     - kitty_current_version != kitty_version
     - ansible_system == "Linux"
@@ -62,6 +63,7 @@
     dest: /usr/local/bin/kitty
     state: link
     force: true
+  become: true
   when:
     - ansible_system == "Linux"
     - kitty_current_version != kitty_version
@@ -72,6 +74,7 @@
     dest: /usr/local/bin/kitten
     state: link
     force: true
+  become: true
   when:
     - ansible_system == "Linux"
     - kitty_current_version != kitty_version

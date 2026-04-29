@@ -4,6 +4,7 @@
 
 - name: Install NVIDIA drivers using ubuntu-drivers
   command: ubuntu-drivers install
+  become: true
   register: nvidia_driver_install
   changed_when: "'nvidia' in nvidia_driver_install.stdout | default('')"
   tags: nvidia
@@ -12,6 +13,7 @@
   apt:
     name: "{{ nvidia_packages }}"
     state: present
+  become: true
   tags: nvidia
 
 - name: Add NVIDIA kernel parameters to GRUB
@@ -20,11 +22,13 @@
     regexp: '^GRUB_CMDLINE_LINUX="'
     line: 'GRUB_CMDLINE_LINUX="{{ nvidia_kernel_params }} "'
     backrefs: true
+  become: true
   register: grub_modified
   tags: nvidia
 
 - name: Update GRUB
   command: update-grub
+  become: true
   when: grub_modified.changed
   tags: nvidia
 
@@ -35,6 +39,7 @@
       options nvidia NVreg_PreserveVideoMemoryAllocations=1
     dest: /etc/modprobe.d/nvidia.conf
     mode: '0644'
+  become: true
   tags: nvidia
 
 - name: Add NVIDIA modules to initramfs
@@ -42,10 +47,12 @@
     path: /etc/initramfs-tools/modules
     line: "{{ nvidia_modules | join(' ') }}"
     state: present
+  become: true
   register: initramfs_modified
   tags: nvidia
 
 - name: Update initramfs
   command: update-initramfs -u
+  become: true
   when: initramfs_modified.changed
   tags: nvidia

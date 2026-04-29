@@ -39,6 +39,7 @@
           - gpg
           - curl
         state: present
+      become: true
 
     - name: Verify Google Chrome GPG key is valid
       ansible.builtin.stat:
@@ -49,6 +50,7 @@
       ansible.builtin.file:
         path: /usr/share/keyrings/google-chrome.gpg
         state: absent
+      become: true
       when: not chrome_gpg_key.stat.exists or chrome_gpg_key.stat.size == 0
 
     - name: Download and dearmor Google Chrome GPG key
@@ -56,12 +58,14 @@
         curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
       args:
         creates: /usr/share/keyrings/google-chrome.gpg
+      become: true
       environment: "{{ chrome_proxy_env | default({}) }}"
 
     - name: Set GPG key permissions
       ansible.builtin.file:
         path: /usr/share/keyrings/google-chrome.gpg
         mode: "0644"
+      become: true
       when: chrome_gpg_key.stat.exists and chrome_gpg_key.stat.size > 0
 
     - name: Add Google Chrome APT repository
@@ -69,9 +73,11 @@
         repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main"
         filename: google-chrome
         state: present
+      become: true
 
     - name: Update APT cache
       ansible.builtin.command: apt-get update
+      become: true
       changed_when: false
 
     - name: Install Google Chrome package
@@ -79,6 +85,7 @@
         name: google-chrome-stable
         state: present
         update_cache: yes
+      become: true
       environment: "{{ chrome_proxy_env | default({}) }}"
 
 - name: Install Google Chrome (macOS)

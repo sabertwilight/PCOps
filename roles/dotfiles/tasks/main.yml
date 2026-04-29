@@ -10,7 +10,6 @@
     depth: 1
     force: true
   environment: "{{ proxy_env }}"
-  become: false
   tags: dotfiles
 
 - name: Check if dotfiles copy script exists
@@ -27,5 +26,4 @@
   args:
     executable: /bin/bash
   when: copy_script.stat.exists
-  become: false
   tags: dotfiles

@@ -6,6 +6,7 @@
   apt:
     name: "{{ fcitx5_packages }}"
     state: present
+  become: true
   tags: [fcitx, rime]
 
 - name: Create Rime config directory
@@ -21,7 +22,6 @@
     dest: "{{ target_user_home }}/.local/share/fcitx5/rime/plum"
     depth: 1
   environment: "{{ proxy_env }}"
-  become: false
   tags: [fcitx, rime]
   ignore_errors: true
   register: plum_install_result
@@ -38,7 +38,6 @@
     rime_frontend=fcitx5-rime bash rime-install {{ rime_ice_recipe }}
   args:
     creates: "{{ target_user_home }}/.local/share/fcitx5/rime/rime_ice.schema.yaml"
-  become: false
   changed_when: false
   tags: [fcitx, rime]
   when: plum_install_result is succeeded
@@ -52,7 +51,6 @@
     - "export XMODIFIERS=@im=fcitx"
     - "export GTK_IM_MODULE=fcitx"
     - "export QT_IM_MODULE=fcitx"
-  become: false
   tags: [fcitx, rime]
 
 - name: Ensure Hyprland config directory exists
@@ -60,7 +58,6 @@
     path: "{{ target_user_home }}/.config/hypr"
     state: directory
     mode: '0755'
-  become: false
   tags: [fcitx, rime]
 
 - name: Add fcitx5 to Hyprland autostart
@@ -69,5 +66,4 @@
     line: "exec-once = fcitx5 -d"
     state: present
     create: true
-  become: false
   tags: [fcitx, rime]

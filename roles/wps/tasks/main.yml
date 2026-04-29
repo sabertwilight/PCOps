@@ -49,6 +49,7 @@
       ansible.builtin.apt:
         deb: /tmp/wps-office.deb
         state: present
+      become: true
       environment: "{{ wps_proxy_env | default({}) }}"
 
     - name: Clean up deb package
