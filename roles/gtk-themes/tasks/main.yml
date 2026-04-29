@@ -27,3 +27,30 @@
     creates: "{{ target_user_home }}/.themes/Andromeda-dark"
   become: false
   tags: gtk
+
+- name: Ensure ~/.icons directory exists
+  file:
+    path: "{{ target_user_home }}/.icons/default"
+    state: directory
+    mode: "0755"
+  become: false
+  tags: gtk
+
+- name: Create cursor theme index to prevent circular Inherits
+  copy:
+    dest: "{{ target_user_home }}/.icons/default/index.theme"
+    content: |
+      [Icon Theme]
+      Name=Default
+      Comment=Default Cursor Theme
+      Inherits={{ cursor_theme_name }}
+    mode: "0644"
+  become: false
+  tags: gtk
+
+- name: Set cursor theme in gsettings
+  dconf:
+    key: "/org/gnome/desktop/interface/cursor-theme"
+    value: "'{{ cursor_theme_name }}'"
+  become: false
+  tags: gtk

@@ -5,3 +5,8 @@ gtk_theme_packages:
   - gtk2-engines-murrine
 
 gtk_themes_repo: "https://github.com/JaKooLit/GTK-themes-icons"
+
+# 光标主题名称，必须与已安装的主题目录名一致
+# 用于 ~/.icons/default/index.theme 的 Inherits 和 gsettings cursor-theme
+# 防止 nwg-look 保存时写入 Inherits=default 导致循环引用
+cursor_theme_name: "Bibata-Modern-Ice"

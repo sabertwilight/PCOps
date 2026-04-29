@@ -3,10 +3,10 @@
 # https://github.com/JaKooLit/Ubuntu-Hyprland
 #
 # 用法:
-#   ansible-playbook playbook.yml -K                    # 完整安装
-#   ansible-playbook playbook.yml -K --tags "core"      # 只安装核心组件
-#   ansible-playbook playbook.yml -K --tags "nvidia"    # 只安装 NVIDIA 配置
-#   ansible-playbook playbook.yml -K -e "@my-config.yml" # 使用自定义配置
+#   ansible-playbook playbooks/hyprland.yml -K                    # 完整安装
+#   ansible-playbook playbooks/hyprland.yml -K --tags "core"      # 只安装核心组件
+#   ansible-playbook playbooks/hyprland.yml -K --tags "nvidia"    # 只安装 NVIDIA 配置
+#   ansible-playbook playbooks/hyprland.yml -K -e "@my-config.yml" # 使用自定义配置
 
 - name: Install Hyprland on Ubuntu 24.04
   hosts: localhost
