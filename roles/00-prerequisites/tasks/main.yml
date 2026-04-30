@@ -67,6 +67,13 @@
   become: true
   tags: prerequisites
 
+- name: Generate required locales
+  locale_gen:
+    name: "{{ item }}"
+  loop: "{{ locales_to_generate }}"
+  become: true
+  tags: prerequisites
+
 - name: Add user to input group
   user:
     name: "{{ target_user }}"
