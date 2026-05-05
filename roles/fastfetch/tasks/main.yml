@@ -1,0 +1,48 @@
+---
+# fastfetch tasks
+# Download and install fastfetch from GitHub releases
+
+- name: Check if fastfetch is already installed
+  stat:
+    path: /usr/local/bin/fastfetch
+  register: fastfetch_installed
+
+- name: Detect system architecture for fastfetch
+  set_fact:
+    fastfetch_arch: "{{ 'aarch64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+- name: Create cache directory
+  file:
+    path: "{{ cache_dir }}/archives"
+    state: directory
+    mode: '0755'
+  when: not fastfetch_installed.stat.exists
+
+- name: Download fastfetch deb package
+  get_url:
+    url: "https://github.com/fastfetch-cli/fastfetch/releases/download/{{ fastfetch_version }}/fastfetch-linux-{{ fastfetch_arch }}.deb"
+    dest: "{{ cache_dir }}/archives/fastfetch-linux-{{ fastfetch_arch }}.deb"
+    mode: '0644'
+  environment: "{{ { 'http_proxy': proxy_http, 'https_proxy': proxy_https } if configure_proxy else {} }}"
+  when:
+    - ansible_system == "Linux"
+    - not fastfetch_installed.stat.exists
+
+- name: Install fastfetch deb package
+  apt:
+    deb: "{{ cache_dir }}/archives/fastfetch-linux-{{ fastfetch_arch }}.deb"
+  become: true
+  when:
+    - ansible_system == "Linux"
+    - not fastfetch_installed.stat.exists
+
+- name: Install fastfetch via package manager (macOS)
+  command: brew install fastfetch
+  when:
+    - ansible_system == "Darwin"
+    - not fastfetch_installed.stat.exists
+
+- name: Display fastfetch installation info
+  debug:
+    msg: "fastfetch {{ fastfetch_version }} installed at /usr/local/bin/fastfetch"
+  when: fastfetch_installed.stat.exists

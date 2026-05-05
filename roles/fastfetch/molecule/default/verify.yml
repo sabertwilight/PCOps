@@ -1,0 +1,13 @@
+---
+- name: Verify
+  hosts: all
+  tasks:
+    - name: Check fastfetch is installed
+      ansible.builtin.command: fastfetch --version
+      register: fastfetch_version
+      changed_when: false
+      failed_when: false
+
+    - name: Display fastfetch version
+      ansible.builtin.debug:
+        msg: "fastfetch version: {{ fastfetch_version.stdout }}"

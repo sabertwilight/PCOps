@@ -1,0 +1,12 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    cache_dir: /tmp/hyprland-ansible
+    configure_proxy: true
+    proxy_http: "http://127.0.0.1:7890"
+    proxy_https: "http://127.0.0.1:7890"
+  tasks:
+    - name: "Include fastfetch"
+      include_role:
+        name: "{{ playbook_dir }}/../../"
