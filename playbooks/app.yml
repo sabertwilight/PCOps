@@ -65,7 +65,11 @@
     - role: wechat
       tags: [app, chat]
 
-        #    - role: wps
+    - role: feeluown
+      when: install_feeluown | default(true)
+      tags: [app, music]
+
+    #    - role: wps
         #      tags: [app, office]
 
     # 终端

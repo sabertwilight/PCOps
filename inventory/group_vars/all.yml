@@ -26,6 +26,7 @@ install_rog: false                 # ASUS ROG 笔记本工具
 install_dotfiles: true             # KooL Hyprland dotfiles
 install_yq: true                    # yq YAML 处理器
 install_jq: true                    # jq JSON 处理器
+install_feeluown: true              # feeluown 音乐播放器
 install_fcitx5_rime_ice: true       # fcitx5 + rime-ice 雾凇拼音
 add_user_to_input_group: true      # 添加用户到 input 组
 
@@ -41,6 +42,7 @@ swappy_version: "v1.5.1"
 wallust_version: "v3.2.0"
 yq_version: "v4.35.1"
 jq_version: "1.7.1"
+feeluown_version: ""
 
 # ===========================================
 # 用户配置

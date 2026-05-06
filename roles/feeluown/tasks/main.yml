@@ -1,0 +1,115 @@
+---
+# feeluown tasks
+# Only for Ubuntu 24.04
+
+- name: Fail if not Ubuntu 24.04
+  fail:
+    msg: "feeluown role only supports Ubuntu 24.04"
+  when: ansible_facts['distribution'] != "Ubuntu" or ansible_facts['distribution_version'] != "24.04"
+
+- name: Check if pipx is installed
+  command: which pipx
+  register: pipx_check
+  changed_when: false
+  failed_when: false
+
+- name: Install pipx
+  when: pipx_check.rc != 0
+  block:
+    - name: Install pipx via pip
+      command: pip install pipx
+      become: true
+
+    - name: Ensure pipx entry point is in PATH
+      command: pipx ensurepath
+      become: true
+
+- name: Check if feeluown is already installed
+  command: pipx list --short 2>/dev/null
+  register: feeluown_pipx_list
+  changed_when: false
+  failed_when: false
+
+- name: Set fact for feeluown installed
+  set_fact:
+    feeluown_is_installed: "{{ 'feeluown' in feeluown_pipx_list.stdout }}"
+
+- name: Set feeluown venv path
+  set_fact:
+    feeluown_venv_path: "{{ ansible_env.HOME }}/.local/share/pipx/venvs/feeluown"
+    feeluown_venv_python: "{{ ansible_env.HOME }}/.local/share/pipx/venvs/feeluown/bin/python"
+
+- name: Install system dependencies (Ubuntu 24.04)
+  when: not feeluown_is_installed
+  apt:
+    name:
+      - python3-pyqt6
+      - python3-pyqt6.qtmultimedia
+      - python3-pyqt6.qtsvg
+      - python3-dbus
+      - libdbus-1-dev
+      - libmpv2
+    state: present
+    update_cache: true
+  become: true
+  environment: "{{ proxy_env }}"
+
+- name: Install feeluown with plugins
+  command: >-
+    pipx install feeluown[battery,ai,cookies,webengine,qt]
+    {{ '--version ' + feeluown_version if feeluown_version else '' }}
+  when: not feeluown_is_installed
+  changed_when: true
+
+- name: Inject dbus-python into feeluown venv
+  command: pipx inject feeluown dbus-python
+  when: not feeluown_is_installed
+  changed_when: true
+
+- name: Get feeluown venv site-packages
+  command: "{{ feeluown_venv_python }} -c \"import site; print(site.getsitepackages()[0])\""
+  register: feeluown_venv_site
+  changed_when: false
+  when: not feeluown_is_installed
+
+- name: Find system PyQt6 dbus file
+  shell: >-
+    SYS_FILE=$(dpkg -L python3-dbus.mainloop.pyqt6 2>/dev/null | grep -E '\.py$|\.so$' | grep -i dbus | head -1)
+    echo "$SYS_FILE"
+  register: sys_pyqt6_dbus_file
+  changed_when: false
+  failed_when: false
+  when: not feeluown_is_installed
+
+- name: Create dbus/mainloop directory in venv
+  file:
+    path: "{{ feeluown_venv_site.stdout }}/dbus/mainloop"
+    state: directory
+    mode: '0755'
+  when:
+    - not feeluown_is_installed
+    - feeluown_venv_site.stdout is defined
+
+- name: Symlink system PyQt6 dbus file into venv
+  shell: >-
+    SYS_FILE=$(dpkg -L python3-dbus.mainloop.pyqt6 2>/dev/null | grep -E '\.py$|\.so$' | grep -i dbus | head -1)
+    SYS_FNAME=$(basename "$SYS_FILE")
+    ln -sf "$SYS_FILE" "{{ feeluown_venv_site.stdout }}/dbus/mainloop/$SYS_FNAME"
+  when:
+    - not feeluown_is_installed
+    - feeluown_venv_site.stdout is defined
+    - sys_pyqt6_dbus_file.stdout | length > 0
+
+- name: Verify dbus.mainloop.pyqt6 import
+  command: "{{ feeluown_venv_python }} -c \"from dbus.mainloop.pyqt6 import DBusQtMainLoop; print('ok')\""
+  register: feeluown_dbus_verify
+  changed_when: false
+  when: not feeluown_is_installed
+
+- name: Assert dbus.mainloop.pyqt6 works
+  assert:
+    that:
+      - feeluown_dbus_verify.stdout == 'ok'
+    fail_msg: "dbus.mainloop.pyqt6 import failed"
+    success_msg: "feeluown installed and dbus.mainloop.pyqt6 works"
+  when: not feeluown_is_installed
