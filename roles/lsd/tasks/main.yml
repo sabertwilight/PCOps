@@ -1,0 +1,82 @@
+---
+# lsd tasks
+# Install lsd from GitHub releases (Linux)
+# or via Homebrew (macOS)
+
+- name: Check if lsd is already installed (Linux)
+  stat:
+    path: /usr/local/bin/lsd
+  register: lsd_installed_linux
+  when: ansible_system == "Linux"
+
+- name: Check if lsd is already installed (macOS)
+  command: brew list lsd
+  register: lsd_installed_macos
+  changed_when: false
+  failed_when: false
+  when: ansible_system == "Darwin"
+
+- name: Detect system architecture for lsd (Linux)
+  set_fact:
+    lsd_arch: "{{ 'aarch64' if ansible_architecture == 'aarch64' else 'x86_64' }}"
+  when: ansible_system == "Linux"
+
+- name: Create cache directory (Linux)
+  file:
+    path: "{{ cache_dir }}"
+    state: directory
+    mode: '0755'
+  when:
+    - ansible_system == "Linux"
+    - not lsd_installed_linux.stat.exists
+
+- name: Download lsd archive (Linux)
+  get_url:
+    url: "https://github.com/lsd-rs/lsd/releases/download/v{{ lsd_version }}/lsd_{{ lsd_version }}_{{ lsd_arch }}-unknown-linux-gnu.tar.gz"
+    dest: "{{ cache_dir }}/lsd.tar.gz"
+    mode: '0644'
+  environment: "{{ proxy_env }}"
+  when:
+    - ansible_system == "Linux"
+    - not lsd_installed_linux.stat.exists
+
+- name: Extract lsd archive (Linux)
+  unarchive:
+    src: "{{ cache_dir }}/lsd.tar.gz"
+    dest: /usr/local/bin/
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+  become: true
+  when:
+    - ansible_system == "Linux"
+    - not lsd_installed_linux.stat.exists
+
+- name: Set permissions for lsd (Linux)
+  file:
+    path: /usr/local/bin/lsd
+    mode: '0755'
+  become: true
+  when:
+    - ansible_system == "Linux"
+    - not lsd_installed_linux.stat.exists
+
+- name: Install lsd via Homebrew (macOS)
+  command: brew install lsd
+  when:
+    - ansible_system == "Darwin"
+    - lsd_installed_macos.rc != 0
+
+- name: Display lsd installation info (Linux)
+  debug:
+    msg: "lsd {{ lsd_version }} installed at /usr/local/bin/lsd"
+  when:
+    - ansible_system == "Linux"
+    - lsd_installed_linux.stat.exists
+
+- name: Display lsd installation info (macOS)
+  debug:
+    msg: "lsd installed via Homebrew"
+  when:
+    - ansible_system == "Darwin"
+    - lsd_installed_macos.rc == 0

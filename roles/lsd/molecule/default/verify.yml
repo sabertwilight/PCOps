@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check lsd binary exists
+      stat:
+        path: /usr/local/bin/lsd
+      register: lsd_binary
+
+    - name: Assert lsd is installed
+      assert:
+        that:
+          - lsd_binary.stat.exists
+          - lsd_binary.stat.mode == '0755'
+          - lsd_binary.stat.isreg
+        fail_msg: "lsd binary not found at /usr/local/bin/lsd"
+        success_msg: "lsd binary is correctly installed"
+
+    - name: Verify lsd version
+      command: lsd --version
+      register: lsd_version_output
+      changed_when: false
+
+    - name: Assert lsd version
+      assert:
+        that:
+          - "'lsd' in lsd_version_output.stdout"
+        fail_msg: "lsd version check failed"
+        success_msg: "lsd is installed correctly"

@@ -1,0 +1,7 @@
+---
+# lsd role defaults
+lsd_version: "1.1.0"
+cache_dir: "{{ lookup('env', 'HOME') }}/.cache/lsd"
+proxy_env:
+  http_proxy: "http://127.0.0.1:7890"
+  https_proxy: "http://127.0.0.1:7890"
