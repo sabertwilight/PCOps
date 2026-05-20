@@ -1,0 +1,80 @@
+---
+# ai-balance tasks
+# 部署 AI Token Plan 查询工具
+
+- name: Fail if not Ubuntu
+  fail:
+    msg: "ai-balance role 仅支持 Ubuntu，当前系统: {{ ansible_distribution }}"
+  when: ansible_distribution != "Ubuntu"
+
+- name: Install system dependencies
+  apt:
+    name:
+      - curl
+      - jq
+      - python3
+      - python3-venv
+    state: present
+  become: true
+
+- name: Create ai-balance share directory
+  file:
+    path: "{{ ansible_user_dir }}/.local/share/ai-balance"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user_id }}"
+
+- name: Create platforms directory
+  file:
+    path: "{{ ansible_user_dir }}/.local/share/ai-balance/platforms"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user_id }}"
+
+- name: Copy ui.py
+  copy:
+    src: assets/ai-balance/ui.py
+    dest: "{{ ansible_user_dir }}/.local/share/ai-balance/ui.py"
+    mode: '0644'
+    owner: "{{ ansible_user_id }}"
+
+- name: Copy platform scripts
+  copy:
+    src: "assets/ai-balance/platforms/{{ item }}"
+    dest: "{{ ansible_user_dir }}/.local/share/ai-balance/platforms/{{ item }}"
+    mode: '0644'
+    owner: "{{ ansible_user_id }}"
+  loop:
+    - __init__.py
+    - kimi.py
+    - minimax.py
+    - zhipu.py
+
+- name: Create Python venv
+  shell: python3 -m venv "{{ ansible_user_dir }}/.local/share/ai-balance/venv"
+  args:
+    creates: "{{ ansible_user_dir }}/.local/share/ai-balance/venv/bin/python"
+
+- name: Install browser_cookie3
+  pip:
+    name: browser_cookie3
+    virtualenv: "{{ ansible_user_dir }}/.local/share/ai-balance/venv"
+  become: true
+  become_user: "{{ ansible_user_id }}"
+
+- name: Copy ai-balance entry script
+  copy:
+    src: assets/ai-balance/ai-balance
+    dest: "{{ ansible_user_dir }}/.local/bin/ai-balance"
+    mode: '0755'
+    owner: "{{ ansible_user_id }}"
+
+- name: Verify ai-balance is executable
+  stat:
+    path: "{{ ansible_user_dir }}/.local/bin/ai-balance"
+  register: ai_balance_file
+
+- name: Display installation info
+  debug:
+    msg: "ai-balance 已安装到 {{ ansible_user_dir }}/.local/bin/ai-balance"
+  when: ai_balance_file.stat.exists

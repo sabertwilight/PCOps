@@ -49,6 +49,9 @@
       tags: [util, app, docker]
       become: true
 
+    - role: ai-balance
+      tags: [util, ai-balance]
+
     # 应用
     - role: cherrystudio
       tags: [app, ai]

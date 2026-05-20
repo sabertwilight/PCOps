@@ -1,0 +1,4 @@
+---
+# ai-balance role defaults
+
+install_ai_balance: true

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SHARE="$HOME/.local/share/ai-balance"
+VENV_PYTHON="$SHARE/venv/bin/python"
+PLATFORMS_DIR="$SHARE/platforms"
+
+if [[ ! -x "$VENV_PYTHON" ]]; then
+    echo -e "\033[91m错误: Python venv 未初始化\033[0m" >&2
+    echo -e "\033[91m请执行: python3 -m venv $SHARE/venv \&\& $SHARE/venv/bin/pip install browser_cookie3\033[0m" >&2
+    exit 1
+fi
+
+# 收集所有平台输出
+results=()
+
+for script in "$PLATFORMS_DIR"/*.py; do
+    [[ "$(basename "$script")" == "__init__.py" ]] && continue
+    output=$("$VENV_PYTHON" "$script" 2>/dev/null || echo '{"platform":"Unknown","error":"脚本执行失败"}')
+    results+=("$output")
+done
+
+# 渲染表格
+echo "${results[@]}" | jq -s '.' | "$VENV_PYTHON" "$SHARE/ui.py"
