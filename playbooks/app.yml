@@ -35,6 +35,9 @@
     - role: dbeaver
       tags: [dev, app, database]
 
+    - role: scc
+      tags: [dev, scc]
+
     # 实用工具
     - role: jq
       tags: [util, app]

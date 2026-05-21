@@ -1,0 +1,7 @@
+---
+# scc role defaults
+scc_version: "3.7.0"
+cache_dir: /tmp/scc-cache
+proxy_env:
+  http_proxy: "http://127.0.0.1:7890"
+  https_proxy: "http://127.0.0.1:7890"

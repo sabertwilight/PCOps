@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check scc binary exists
+      stat:
+        path: /usr/local/bin/scc
+      register: scc_binary
+
+    - name: Assert scc is installed
+      assert:
+        that:
+          - scc_binary.stat.exists
+          - scc_binary.stat.mode == '0755'
+          - scc_binary.stat.isreg
+        fail_msg: "scc binary not found at /usr/local/bin/scc"
+        success_msg: "scc binary is correctly installed"
+
+    - name: Verify scc version
+      command: /usr/local/bin/scc --version
+      register: scc_version_output
+      changed_when: false
+
+    - name: Assert scc version
+      assert:
+        that:
+          - "'scc' in scc_version_output.stdout"
+        fail_msg: "scc version check failed"
+        success_msg: "scc is installed correctly"

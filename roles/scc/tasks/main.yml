@@ -1,0 +1,73 @@
+---
+# scc tasks
+# 从 GitHub releases 下载并安装 scc (Linux)
+# 或通过 Homebrew 安装 (macOS)
+
+- name: Check if scc is already installed (Linux)
+  stat:
+    path: /usr/local/bin/scc
+  register: scc_installed_linux
+  when: ansible_system == "Linux"
+
+- name: Check if scc is already installed (macOS)
+  command: brew list scc
+  register: scc_installed_macos
+  changed_when: false
+  failed_when: false
+  when: ansible_system == "Darwin"
+
+- name: Detect system architecture for scc
+  set_fact:
+    scc_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'x86_64' }}"
+  when: ansible_system == "Linux"
+
+- name: Create cache directory (Linux)
+  file:
+    path: "{{ cache_dir }}/archives"
+    state: directory
+    mode: '0755'
+  when:
+    - ansible_system == "Linux"
+    - not scc_installed_linux.stat.exists
+
+- name: Download scc binary (Linux)
+  get_url:
+    url: "https://github.com/boyter/scc/releases/download/v{{ scc_version }}/scc_Linux_{{ scc_arch }}.tar.gz"
+    dest: "{{ cache_dir }}/archives/scc_Linux_{{ scc_arch }}.tar.gz"
+    mode: '0644'
+  environment: "{{ proxy_env }}"
+  when:
+    - ansible_system == "Linux"
+    - not scc_installed_linux.stat.exists
+
+- name: Extract scc tarball (Linux)
+  unarchive:
+    src: "{{ cache_dir }}/archives/scc_Linux_{{ scc_arch }}.tar.gz"
+    dest: /usr/local/bin/
+    mode: '0755'
+    remote_src: true
+    creates: /usr/local/bin/scc
+  become: true
+  when:
+    - ansible_system == "Linux"
+    - not scc_installed_linux.stat.exists
+
+- name: Install scc via Homebrew (macOS)
+  command: brew install boyter/scc/scc
+  when:
+    - ansible_system == "Darwin"
+    - scc_installed_macos.rc != 0
+
+- name: Display scc installation info (Linux)
+  debug:
+    msg: "scc v{{ scc_version }} installed at /usr/local/bin/scc"
+  when:
+    - ansible_system == "Linux"
+    - scc_installed_linux.stat.exists
+
+- name: Display scc installation info (macOS)
+  debug:
+    msg: "scc installed via Homebrew"
+  when:
+    - ansible_system == "Darwin"
+    - scc_installed_macos.rc == 0
