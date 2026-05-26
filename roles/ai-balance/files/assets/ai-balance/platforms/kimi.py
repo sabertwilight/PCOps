@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Kimi 平台数据获取"""
-import os, sys, json, urllib.request, urllib.error
+import os, sys, json, time, urllib.request, urllib.error
 from datetime import datetime, timezone, timedelta
 
 TOKEN_DIR = os.path.expanduser("~/.local/share/ai-balance")
@@ -11,11 +11,18 @@ def _get_token():
     token = os.environ.get("KIMI_AUTH_TOKEN", "").strip()
     if token:
         return token
+
+    # 缓存 TTL: 1 小时
+    CACHE_TTL = 3600
     if os.path.exists(CACHE):
-        with open(CACHE) as f:
-            token = f.read().strip()
-        if token:
-            return token
+        mtime = os.path.getmtime(CACHE)
+        if time.time() - mtime < CACHE_TTL:
+            with open(CACHE) as f:
+                token = f.read().strip()
+            if token:
+                return token
+        # 缓存过期，继续尝试重新抓取
+
     try:
         import browser_cookie3
         for loader in (browser_cookie3.chrome, browser_cookie3.chromium, browser_cookie3.firefox):
@@ -63,6 +70,16 @@ def _fmt_reset(iso_str):
     return dt_cn.strftime('%m-%d %H:%M')
 
 
+def _try_refresh_and_refetch():
+    """删除缓存后重新从浏览器抓取 token 并请求"""
+    if os.path.exists(CACHE):
+        os.remove(CACHE)
+    token = _get_token()
+    if not token:
+        return None
+    return _fetch(token)
+
+
 def main():
     token = _get_token()
     if not token:
@@ -70,6 +87,14 @@ def main():
         return
 
     data = _fetch(token)
+
+    # 401 时自动刷新缓存并重试一次
+    if data.get("_error") and data.get("_status") == 401:
+        data = _try_refresh_and_refetch()
+        if data is None:
+            print(json.dumps({"platform": "Kimi", "error": "无法获取 Token，请登录 Kimi 或设置 KIMI_AUTH_TOKEN"}))
+            return
+
     if data.get("_error"):
         msg = data.get('_body', data.get('_msg', '未知错误'))
         print(json.dumps({"platform": "Kimi", "error": msg}))
