@@ -53,22 +53,22 @@ def main():
 
     mm_item = None
     search_item = None
+    video_item = None
     for item in data.get("model_remains", []):
-        if item.get("model_name") == "MiniMax-M*":
+        model = item.get("model_name", "")
+        if "general" in model or "MiniMax" in model:
             mm_item = item
-        elif item.get("model_name") == "coding-plan-search":
+        elif "search" in model:
             search_item = item
+        elif "video" in model:
+            video_item = item
 
     lines = []
 
     # MiniMax 文本生成
     if mm_item:
-        used_i = mm_item["current_interval_usage_count"]
-        total_i = mm_item["current_interval_total_count"]
-        used_w = mm_item["current_weekly_usage_count"]
-        total_w = mm_item["current_weekly_total_count"]
-        usage_5h = round(used_i / total_i * 100) if total_i else None
-        usage_weekly = round(used_w / total_w * 100) if total_w else None
+        usage_5h = 100 - (mm_item.get("current_interval_remaining_percent") or 0)
+        usage_weekly = 100 - (mm_item.get("current_weekly_remaining_percent") or 0)
         lines.append(json.dumps({
             "platform": "MiniMax",
             "usage_5h": usage_5h,
@@ -81,12 +81,8 @@ def main():
 
     # MiniMax-MCP
     if search_item:
-        used_i = search_item["current_interval_usage_count"]
-        total_i = search_item["current_interval_total_count"]
-        used_w = search_item["current_weekly_usage_count"]
-        total_w = search_item["current_weekly_total_count"]
-        usage_5h = round(used_i / total_i * 100) if total_i else None
-        usage_weekly = round(used_w / total_w * 100) if total_w else None
+        usage_5h = 100 - (search_item.get("current_interval_remaining_percent") or 0)
+        usage_weekly = 100 - (search_item.get("current_weekly_remaining_percent") or 0)
         lines.append(json.dumps({
             "platform": "MiniMax-MCP",
             "usage_5h": usage_5h,
