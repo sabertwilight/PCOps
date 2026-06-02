@@ -7,6 +7,27 @@ TOKEN_DIR = os.path.expanduser("~/.local/share/ai-balance")
 CACHE = os.path.join(TOKEN_DIR, "kimi-auth.token")
 
 
+def _extract_token_from_cookie(raw_cookie):
+    """kimi-auth cookie 可能是 base64/base64url 编码的 JSON，尝试提取 accessToken。"""
+    if not raw_cookie:
+        return raw_cookie
+    # 如果值看起来像 JWT（三段式点号分隔）或普通 token，直接返回
+    if raw_cookie.count('.') >= 2 or len(raw_cookie) < 40:
+        return raw_cookie
+    # 尝试 base64/base64url 解码
+    try:
+        import base64
+        padded = raw_cookie + '=' * (4 - len(raw_cookie) % 4) if len(raw_cookie) % 4 else raw_cookie
+        decoded = base64.b64decode(padded.replace('-', '+').replace('_', '/')).decode('utf-8')
+        data = json.loads(decoded)
+        token = data.get('accessToken')
+        if token:
+            return token
+    except Exception:
+        pass
+    return raw_cookie
+
+
 def _get_token():
     token = os.environ.get("KIMI_AUTH_TOKEN", "").strip()
     if token:
@@ -29,10 +50,11 @@ def _get_token():
             try:
                 for c in loader(domain_name="kimi.com"):
                     if c.name == "kimi-auth":
+                        token = _extract_token_from_cookie(c.value)
                         os.makedirs(TOKEN_DIR, exist_ok=True)
                         with open(CACHE, "w") as f:
-                            f.write(c.value)
-                        return c.value
+                            f.write(token)
+                        return token
             except Exception:
                 continue
     except ImportError:
