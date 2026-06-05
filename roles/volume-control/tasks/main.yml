@@ -1,0 +1,63 @@
+---
+# volume-control tasks
+# Per-application volume defaults via WirePlumber restore-stream
+
+- name: Check WirePlumber is installed
+  ansible.builtin.stat:
+    path: /usr/bin/wireplumber
+  register: wp_binary
+
+- name: Fail if WirePlumber not installed
+  ansible.builtin.fail:
+    msg: >-
+      WirePlumber not found at /usr/bin/wireplumber.
+      Set install_volume_control: false to skip this role.
+  when: not wp_binary.stat.exists
+
+- name: Create WirePlumber config directory
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/wireplumber/main.lua.d"
+    state: directory
+    mode: "0755"
+
+- name: Remove LUA rules file when no remaps configured
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/wireplumber/main.lua.d/51-volume-control.lua"
+    state: absent
+  when: volume_app_remap | default({}) | length == 0
+
+- name: Deploy volume-control LUA rules
+  ansible.builtin.template:
+    src: volume-control-rules.lua.j2
+    dest: "{{ ansible_env.HOME }}/.config/wireplumber/main.lua.d/51-volume-control.lua"
+    mode: "0644"
+  register: lua_rule
+  when: volume_app_remap | default({}) | length > 0
+
+- name: Create WirePlumber state directory
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.local/state/wireplumber"
+    state: directory
+    mode: "0755"
+
+- name: Apply volume limits to restore-stream state file
+  ansible.builtin.script:
+    cmd: apply-volume-limits.py
+  environment:
+    AW_VOLUME_LIMITS: "{{ volume_app_limits | to_json }}"
+  register: apply_result
+  changed_when: "'CHANGED' in apply_result.stdout"
+
+- name: Restart WirePlumber to pick up changes
+  ansible.builtin.systemd:
+    name: wireplumber
+    scope: user
+    state: restarted
+  when: >-
+    ansible_env.XDG_RUNTIME_DIR is defined
+    and (apply_result.changed or (lua_rule is defined and lua_rule.changed))
+  failed_when: false
+
+- name: Volume control summary
+  ansible.builtin.debug:
+    msg: "{{ apply_result.stdout_lines }}"

@@ -1,0 +1,19 @@
+---
+# volume-control role defaults
+install_volume_control: true
+
+# Map of application name -> linear volume percent (0-100).
+# The name must match the application.name as seen by WirePlumber,
+# or the remapped name if volume_app_remap is configured for that app.
+# 100 = no change from default. Lower values reduce the app's volume.
+volume_app_limits:
+  WeChat: 20
+  Blanket: 100
+
+# Remap rules for apps whose application.name differs from their process binary.
+# The key is the desired application.name (must match a key in volume_app_limits).
+# Only apps listed here get a LUA remap rule; other apps rely on direct name matching.
+volume_app_remap:
+  WeChat:
+    match_property: application.process.binary
+    match_value: wechat

@@ -1,0 +1,15 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include volume-control"
+      include_role:
+        name: "volume-control"
+      vars:
+        volume_app_limits:
+          WeChat: 20
+          Blanket: 100
+        volume_app_remap:
+          WeChat:
+            match_property: application.process.binary
+            match_value: wechat

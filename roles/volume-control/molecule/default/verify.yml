@@ -1,0 +1,58 @@
+---
+- name: Verify
+  hosts: all
+  tasks:
+    - name: Check restore-stream state file exists
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.local/state/wireplumber/restore-stream"
+      register: state_file
+
+    - name: Assert state file exists
+      ansible.builtin.assert:
+        that:
+          - state_file.stat.exists
+        fail_msg: "restore-stream state file not found"
+
+    - name: Read state file
+      ansible.builtin.command: cat {{ ansible_env.HOME }}/.local/state/wireplumber/restore-stream
+      register: state_content
+      changed_when: false
+
+    - name: Assert WeChat volume entry
+      ansible.builtin.assert:
+        that:
+          - "'Output/Audio:application.name:WeChat:volume=0.2' in state_content.stdout"
+          - "'Output/Audio:application.name:WeChat:channelVolumes=0.2;0.2;' in state_content.stdout"
+          - "'Output/Audio:application.name:WeChat:mute=false' in state_content.stdout"
+        fail_msg: "WeChat state file entries missing or incorrect"
+
+    - name: Assert Blanket volume entry
+      ansible.builtin.assert:
+        that:
+          - "'Output/Audio:application.name:Blanket:volume=1.0' in state_content.stdout"
+        fail_msg: "Blanket state file entry missing or incorrect"
+
+    - name: Check LUA rule file exists
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.config/wireplumber/main.lua.d/51-volume-control.lua"
+      register: lua_file
+
+    - name: Assert LUA rule file exists
+      ansible.builtin.assert:
+        that:
+          - lua_file.stat.exists
+        fail_msg: "LUA rule file not found"
+
+    - name: Read LUA rule file
+      ansible.builtin.command: cat {{ ansible_env.HOME }}/.config/wireplumber/main.lua.d/51-volume-control.lua
+      register: lua_content
+      changed_when: false
+
+    - name: Assert LUA rule content
+      ansible.builtin.assert:
+        that:
+          - "'application.process.binary' in lua_content.stdout"
+          - "'wechat' in lua_content.stdout"
+          - "'application.name' in lua_content.stdout"
+          - "'WeChat' in lua_content.stdout"
+        fail_msg: "LUA rule content missing expected remap rule"

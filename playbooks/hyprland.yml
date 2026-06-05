@@ -117,6 +117,10 @@
       when: install_fcitx5_rime_ice
       tags: [fcitx, rime, optional]
 
+    - role: volume-control
+      when: install_volume_control
+      tags: [volume, audio, optional]
+
     # Phase 5: 最终验证
     - role: final-check
       tags: [verify, always]

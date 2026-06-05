@@ -29,6 +29,7 @@ install_jq: true                    # jq JSON 处理器
 install_feeluown: true              # feeluown 音乐播放器
 install_fcitx5_rime_ice: true       # fcitx5 + rime-ice 雾凇拼音
 add_user_to_input_group: true      # 添加用户到 input 组
+install_volume_control: true        # WirePlumber 每应用音量控制
 
 # ===========================================
 # 版本标签 (可覆盖)
@@ -108,3 +109,18 @@ apt_proxy_https: "http://127.0.0.1:7890"
 proxy_http: "http://127.0.0.1:7890"
 proxy_https: "http://127.0.0.1:7890"
 proxy_all: "socks5://127.0.0.1:7890"
+
+# ===========================================
+# 音量控制 - 每应用音量默认值
+# ===========================================
+volume_app_limits:
+  WeChat: 50
+  Blanket: 150
+
+volume_app_remap:
+  WeChat:
+    match_property: application.process.binary
+    match_value: wechat
+  Blanket:
+    match_property: application.process.binary
+    match_value: python3.13
