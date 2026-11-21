@@ -1,0 +1,26 @@
+---
+# my-config.yml 配置模板
+#
+# 用法：
+#   cp my-config.yml.example my-config.yml   # 复制本文件
+#   # 填入真实值
+#   ansible-playbook playbooks/app.yml -K -e @my-config.yml
+#
+# 注意：my-config.yml 已被 .gitignore 忽略（连同 *-config.yml），永远不会入库；
+# 本模板只包含占位符，可安全提交。所有变量也都可以直接用 -e KEY=VALUE 传入。
+
+# ===========================================
+# 语音输入（roles/voice-input 必填）
+# 缺失时 role 会 fail-fast，报错文案即开通步骤：
+# 火山引擎控制台 → 豆包语音 → 开通「豆包录音文件识别模型2.0」（有免费试用额度）
+# → 「快捷API接入」创建 API Key
+# ===========================================
+voice_input_api_key: ""
+
+# ===========================================
+# 可选覆盖（按需取消注释；默认值见 inventory/group_vars/all.yml
+# 与 roles/<name>/defaults/main.yml）
+# ===========================================
+# install_voice_input: true            # 语音输入总开关（group_vars 默认 true）
+# voice_input_resource_id: "volc.seedasr.auc"   # 一般无需改
+# install_wireguard_client: false      # WireGuard 客户端（未接入 playbook，见 role README）
