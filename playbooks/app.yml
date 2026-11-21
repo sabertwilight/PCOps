@@ -21,6 +21,10 @@
     - role: fcitx5-rime-ice
       tags: [dev, app]
 
+    - role: voice-input
+      when: install_voice_input | default(true)
+      tags: [app, voice]
+
     # Browser
     - role: google-chrome
       tags: [dev, app]

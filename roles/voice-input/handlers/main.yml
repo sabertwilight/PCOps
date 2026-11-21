@@ -1,0 +1,6 @@
+---
+- name: Restart vinput-daemon
+  systemd:
+    name: vinput-daemon.service
+    scope: user
+    state: restarted

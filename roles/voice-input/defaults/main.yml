@@ -1,0 +1,12 @@
+---
+# voice-input role defaults
+# 豆包语音 API Key 必须通过 -e @my-config.yml 传入（my-config.yml 已被 .gitignore 忽略）。
+# 首次使用需先在火山控制台开通「豆包语音 → 豆包录音文件识别模型2.0」并创建 API Key，
+# 创建应用后有免费试用额度。详见 docs/Agent语音输入与输出端解决方案.md 第二部分「0. 实施记录」。
+voice_input_api_key: ""
+voice_input_resource_id: "volc.seedasr.auc"
+voice_input_provider_script: "{{ ansible_user_dir }}/.local/share/vinput/providers/doubao/batch"
+
+proxy_env:
+  http_proxy: "http://127.0.0.1:7890"
+  https_proxy: "http://127.0.0.1:7890"

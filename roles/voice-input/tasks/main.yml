@@ -1,0 +1,156 @@
+---
+# voice-input tasks
+# 部署 fcitx5-vinput + 豆包语音官方 ASR API（云端 provider 路线）
+# 排障与背景见 docs/Agent语音输入与输出端解决方案.md 第二部分「0. 实施记录」
+
+- name: Fail if not Ubuntu
+  fail:
+    msg: "voice-input role 仅支持 Ubuntu，当前系统: {{ ansible_distribution }}"
+  when: ansible_distribution != "Ubuntu"
+  tags: [voice]
+
+- name: Fail if API key missing
+  fail:
+    msg: >-
+      缺少 voice_input_api_key。步骤：
+      1) 火山控制台开通「豆包语音 → 豆包录音文件识别模型2.0」并创建 API Key（创建应用有免费试用额度）；
+      2) 在仓库根目录创建 my-config.yml（已被 .gitignore 忽略），写入 voice_input_api_key: "<你的Key>"；
+      3) 用 ansible-playbook playbooks/app.yml -K -e @my-config.yml --tags voice 运行。
+  when: voice_input_api_key | length == 0
+  tags: [voice]
+
+- name: Add xifan233/vinput PPA
+  apt_repository:
+    repo: "ppa:xifan233/ppa"
+    state: present
+  become: true
+  environment: "{{ proxy_env }}"
+  tags: [voice]
+
+- name: Install fcitx5-vinput (full, with sherpa-onnx runtime)
+  apt:
+    name: fcitx5-vinput
+    state: present
+  become: true
+  tags: [voice]
+
+- name: Initialize vinput config
+  command: vinput init
+  args:
+    creates: "{{ ansible_user_dir }}/.config/vinput/config.json"
+  tags: [voice]
+
+- name: Check whether doubao-batch provider is registered
+  shell: grep -c 'provider.doubao.batch' "{{ ansible_user_dir }}/.config/vinput/config.json"
+  register: voice_input_provider_registered
+  changed_when: false
+  failed_when: false
+  tags: [voice]
+
+- name: Register doubao-batch provider from vinput registry
+  command: vinput provider add doubao-batch
+  # 首次从 registry 拉脚本；raw.githubusercontent 不通时会自动回落 gh-proxy 镜像，可能需要几分钟
+  when: (voice_input_provider_registered.stdout | default('0')) == '0'
+  notify: Restart vinput-daemon
+  tags: [voice]
+
+# 新版火山控制台只发单个 API Key（X-Api-Key 头），与脚本默认的旧版
+# AppId + AccessToken 对不同。以下四处补丁改为 X-Api-Key 鉴权，
+# 凭证读取保持回退链 VINPUT_ASR_API_KEY -> VINPUT_ASR_ACCESS_TOKEN。
+# 补丁幂等：已打过的脚本不再匹配。
+
+- name: Patch provider script - config struct fields
+  replace:
+    path: "{{ voice_input_provider_script }}"
+    regexp: '(?m)^    app_id: str\n    access_token: str$'
+    replace: '    api_key: str'
+  notify: Restart vinput-daemon
+  tags: [voice]
+
+- name: Patch provider script - credential loading
+  replace:
+    path: "{{ voice_input_provider_script }}"
+    regexp: '(?m)^    app_id = require_env\("VINPUT_ASR_APP_ID"\)\n    access_token = require_env\("VINPUT_ASR_ACCESS_TOKEN"\)$'
+    replace: |-
+      api_key = (
+              optional_env("VINPUT_ASR_API_KEY")
+              or optional_env("VINPUT_ASR_ACCESS_TOKEN")
+              or require_env("VINPUT_ASR_API_KEY")
+          )
+  notify: Restart vinput-daemon
+  tags: [voice]
+
+- name: Patch provider script - ProviderConfig constructor
+  replace:
+    path: "{{ voice_input_provider_script }}"
+    regexp: '(?m)^        app_id=app_id,\n        access_token=access_token,$'
+    replace: '        api_key=api_key,'
+  notify: Restart vinput-daemon
+  tags: [voice]
+
+- name: Patch provider script - X-Api-Key request header
+  replace:
+    path: "{{ voice_input_provider_script }}"
+    regexp: '(?m)^            "X-Api-App-Key": config\.app_id,\n            "X-Api-Access-Key": config\.access_token,$'
+    replace: '            "X-Api-Key": config.api_key,'
+  notify: Restart vinput-daemon
+  tags: [voice]
+
+- name: Read vinput config
+  slurp:
+    path: "{{ ansible_user_dir }}/.config/vinput/config.json"
+  register: voice_input_config
+  tags: [voice]
+
+- name: Parse vinput config
+  set_fact:
+    voice_input_cfg: "{{ voice_input_config.content | b64decode | from_json }}"
+  tags: [voice]
+
+- name: Assert doubao provider position in providers list
+  assert:
+    that:
+      - voice_input_cfg.asr.providers[1].id == 'provider.doubao.batch'
+    fail_msg: "vinput config 的 providers[1] 不是 provider.doubao.batch（可能被手工调整过），请检查 {{ ansible_user_dir }}/.config/vinput/config.json"
+  tags: [voice]
+
+- name: Write provider credentials and activate doubao-batch
+  command: vinput config set {{ item.key }} "{{ item.value }}"
+  loop:
+    - { key: "/asr/providers/1/env/VINPUT_ASR_ACCESS_TOKEN", value: "{{ voice_input_api_key }}" }
+    - { key: "/asr/providers/1/env/VINPUT_ASR_RESOURCE_ID", value: "{{ voice_input_resource_id }}" }
+    - { key: "/asr/active_provider", value: "provider.doubao.batch" }
+  when: >-
+    voice_input_cfg.asr.providers[1].env.VINPUT_ASR_ACCESS_TOKEN != voice_input_api_key or
+    voice_input_cfg.asr.providers[1].env.VINPUT_ASR_RESOURCE_ID != voice_input_resource_id or
+    voice_input_cfg.asr.active_provider != 'provider.doubao.batch'
+  notify: Restart vinput-daemon
+  tags: [voice]
+
+- name: Enable and start vinput-daemon (user service)
+  systemd:
+    name: vinput-daemon.service
+    scope: user
+    enabled: true
+    state: started
+  tags: [voice]
+
+- name: Ensure fcitx5 autostart in Hyprland
+  lineinfile:
+    path: "{{ ansible_user_dir }}/.config/hypr/autostart"
+    line: "exec-once = fcitx5 -d"
+    state: present
+    create: true
+  tags: [voice, fcitx]
+
+- name: Check whether fcitx5 is running
+  command: pgrep -x fcitx5
+  register: voice_input_fcitx5_running
+  changed_when: false
+  failed_when: false
+  tags: [voice, fcitx]
+
+- name: Reload fcitx5 to load vinput addon
+  command: fcitx5 -r
+  when: voice_input_fcitx5_running.rc == 0
+  tags: [voice, fcitx]

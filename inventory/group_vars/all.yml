@@ -28,6 +28,7 @@ install_yq: true                    # yq YAML 处理器
 install_jq: true                    # jq JSON 处理器
 install_feeluown: true              # feeluown 音乐播放器
 install_fcitx5_rime_ice: true       # fcitx5 + rime-ice 雾凇拼音
+install_voice_input: true           # fcitx5-vinput + 豆包语音官方 ASR（需 -e @my-config.yml 提供 API Key）
 add_user_to_input_group: true      # 添加用户到 input 组
 install_volume_control: true        # WirePlumber 每应用音量控制
 
