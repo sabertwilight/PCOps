@@ -1,0 +1,171 @@
+---
+- name: "{{ item.id }} | Validate SSH target resolves through client config"
+  ansible.builtin.command: "{{ ssh_intranet_tunnel_ssh }} -G {{ item.ssh_host }}"
+  register: ssh_intranet_tunnel_ssh_g
+  changed_when: false
+  failed_when: ssh_intranet_tunnel_ssh_g.rc != 0
+
+- name: "{{ item.id }} | Manage persistent systemd user unit"
+  when: item.systemd | default(true) | bool
+  environment:
+    XDG_RUNTIME_DIR: "{{ ssh_intranet_tunnel_xdg_runtime_dir }}"
+  block:
+    - name: "{{ item.id }} | Ensure systemd user directory exists"
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.config/systemd/user"
+        state: directory
+        mode: "0755"
+
+    - name: "{{ item.id }} | Write tunnel unit"
+      ansible.builtin.template:
+        src: systemd-user.service.j2
+        dest: "{{ ansible_env.HOME }}/.config/systemd/user/ssh-intranet-{{ item.id }}.service"
+        mode: "0644"
+
+    - name: "{{ item.id }} | Reload user manager"
+      ansible.builtin.systemd:
+        daemon_reload: true
+        scope: user
+
+    - name: "{{ item.id }} | Enable and start tunnel"
+      ansible.builtin.systemd:
+        name: ssh-intranet-{{ item.id }}.service
+        enabled: "{{ item.autostart | default(true) | bool }}"
+        state: started
+        scope: user
+
+    - name: "{{ item.id }} | Confirm tunnel unit is active"
+      ansible.builtin.command: "systemctl --user is-active ssh-intranet-{{ item.id }}.service"
+      register: ssh_intranet_tunnel_state
+      changed_when: false
+      failed_when: ssh_intranet_tunnel_state.stdout | trim != 'active'
+
+    - name: "{{ item.id }} | Wait for SOCKS listener"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ item.local_port | int }}"
+        timeout: "{{ ssh_intranet_tunnel_wait_timeout }}"
+        state: started
+
+- name: "{{ item.id }} | Verify reachable targets through the tunnel"
+  when:
+    - item.systemd | default(true) | bool
+    - item.verify_targets | default([]) | length > 0
+  ansible.builtin.command:
+    cmd: >-
+      curl -sS -m 10 -o /dev/null -w '%{http_code}'
+      --socks5-hostname 127.0.0.1:{{ item.local_port }} {{ target }}
+  loop: "{{ item.verify_targets | default([]) }}"
+  loop_control:
+    loop_var: target
+    label: "{{ target }}"
+  register: ssh_intranet_tunnel_verify
+  changed_when: false
+  failed_when: ssh_intranet_tunnel_verify.rc != 0
+
+- name: "{{ item.id }} | Report verified targets"
+  when: item.verify_targets | default([]) | length > 0
+  ansible.builtin.debug:
+    msg: "{{ ssh_intranet_tunnel_verify.results | map(attribute='target') | zip(ssh_intranet_tunnel_verify.results | map(attribute='stdout')) | map('join', ' -> ') | list }}"
+
+- name: "{{ item.id }} | Configure dedicated Firefox profile"
+  when: item.firefox_profile | default(false) | bool
+  vars:
+    ssh_intranet_tunnel_profile_dir: >-
+      {{ ssh_intranet_tunnel_firefox_base }}/intra-{{ item.ssh_host
+         | replace('/', '_') | replace('@', '_') | replace(':', '_') | replace(' ', '_') }}
+    ssh_intranet_tunnel_pac_path: >-
+      {{ ssh_intranet_tunnel_firefox_base }}/intra-{{ item.ssh_host
+         | replace('/', '_') | replace('@', '_') | replace(':', '_') | replace(' ', '_') }}/intra.pac
+    ssh_intranet_tunnel_domains: "{{ item.domains | default([]) }}"
+  block:
+    - name: "{{ item.id }} | Assert Firefox executable is present"
+      ansible.builtin.assert:
+        that:
+          - ssh_intranet_tunnel_firefox_bin_stat.stat.exists
+        fail_msg: "firefox_profile 需要 {{ ssh_intranet_tunnel_firefox_bin }}，但没找到"
+
+    - name: "{{ item.id }} | Ensure Firefox profile directory exists"
+      ansible.builtin.file:
+        path: "{{ ssh_intranet_tunnel_profile_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: "{{ item.id }} | Write PAC allowlist"
+      when: ssh_intranet_tunnel_domains | length > 0
+      ansible.builtin.template:
+        src: pac.j2
+        dest: "{{ ssh_intranet_tunnel_pac_path }}"
+        mode: "0644"
+      vars:
+        port: "{{ item.local_port }}"
+        domains: "{{ ssh_intranet_tunnel_domains }}"
+
+    - name: "{{ item.id }} | Remove stale PAC file"
+      when: ssh_intranet_tunnel_domains | length == 0
+      ansible.builtin.file:
+        path: "{{ ssh_intranet_tunnel_pac_path }}"
+        state: absent
+
+    - name: "{{ item.id }} | Write Firefox proxy prefs"
+      ansible.builtin.template:
+        src: browser-user.js.j2
+        dest: "{{ ssh_intranet_tunnel_profile_dir }}/user.js"
+        mode: "0644"
+      vars:
+        port: "{{ item.local_port }}"
+        pac_path: "{{ ssh_intranet_tunnel_pac_path }}"
+        domains: "{{ ssh_intranet_tunnel_domains }}"
+
+    - name: "{{ item.id }} | Report Firefox profile"
+      ansible.builtin.debug:
+        msg:
+          - "profile: {{ ssh_intranet_tunnel_profile_dir }}"
+          - "启动: firefox --profile {{ ssh_intranet_tunnel_profile_dir }}"
+          - "模式: {{ 'PAC 白名单 ' ~ ssh_intranet_tunnel_domains | length ~ ' 条' if ssh_intranet_tunnel_domains | length > 0 else '全量 SOCKS5' }}"
+
+    - name: "{{ item.id }} | Ensure desktop applications directory exists"
+      when: item.desktop_entry | default(true) | bool
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.local/share/applications"
+        state: directory
+        mode: "0755"
+
+    - name: "{{ item.id }} | Write desktop shortcut"
+      when: item.desktop_entry | default(true) | bool
+      ansible.builtin.template:
+        src: desktop-entry.desktop.j2
+        dest: "{{ ansible_env.HOME }}/.local/share/applications/ssh-intranet-firefox-{{ item.id }}.desktop"
+        mode: "0644"
+      vars:
+        profile_dir: "{{ ssh_intranet_tunnel_profile_dir }}"
+        icon: "{{ ssh_intranet_tunnel_firefox_icon }}"
+
+    - name: "{{ item.id }} | Validate desktop shortcut"
+      when:
+        - item.desktop_entry | default(true) | bool
+        - ssh_intranet_tunnel_desktop_tools.stdout is search('desktop-file-validate')
+      ansible.builtin.command:
+        cmd: >-
+          desktop-file-validate
+          {{ ansible_env.HOME }}/.local/share/applications/ssh-intranet-firefox-{{ item.id }}.desktop
+      register: ssh_intranet_tunnel_desktop_validate
+      changed_when: false
+      failed_when: ssh_intranet_tunnel_desktop_validate.rc != 0
+
+    - name: "{{ item.id }} | Refresh desktop database"
+      when:
+        - item.desktop_entry | default(true) | bool
+        - ssh_intranet_tunnel_desktop_tools.stdout is search('update-desktop-database')
+      ansible.builtin.command:
+        cmd: >-
+          update-desktop-database
+          {{ ansible_env.HOME }}/.local/share/applications
+      changed_when: false
+      failed_when: false
+
+    - name: "{{ item.id }} | Remove desktop shortcut when disabled"
+      when: not (item.desktop_entry | default(true) | bool)
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.local/share/applications/ssh-intranet-firefox-{{ item.id }}.desktop"
+        state: absent

@@ -1,0 +1,76 @@
+---
+- name: Assert connection definitions are complete
+  ansible.builtin.assert:
+    that:
+      - item.id is defined and item.id | length > 0
+      - item.ssh_host is defined and item.ssh_host | length > 0
+      - item.local_port is defined
+      - item.local_port | int >= 1 and item.local_port | int <= 65535
+    fail_msg: "ssh_intranet_tunnel_connections 条目缺少 id/ssh_host/local_port: {{ item | to_json }}"
+  loop: "{{ ssh_intranet_tunnel_connections }}"
+  loop_control:
+    label: "{{ item.id | default('?') }}"
+  when: ssh_intranet_tunnel_connections | length > 0
+
+- name: Check ssh client is available
+  ansible.builtin.command: "{{ ssh_intranet_tunnel_ssh }} -V"
+  register: ssh_intranet_tunnel_ssh_version
+  changed_when: false
+  failed_when: ssh_intranet_tunnel_ssh_version.rc != 0
+
+- name: Install intra-tun CLI
+  when: ssh_intranet_tunnel_install_cli | bool
+  block:
+    - name: Ensure CLI directory exists
+      ansible.builtin.file:
+        path: "{{ ssh_intranet_tunnel_cli_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install intra-tun script
+      ansible.builtin.copy:
+        src: intra-tun
+        dest: "{{ ssh_intranet_tunnel_cli_dir }}/{{ ssh_intranet_tunnel_cli_name }}"
+        mode: "0755"
+
+- name: Detect snap-packaged Firefox
+  ansible.builtin.stat:
+    path: /snap/firefox/current
+  register: ssh_intranet_tunnel_snap_firefox
+
+- name: Resolve Firefox profile base directory
+  ansible.builtin.set_fact:
+    ssh_intranet_tunnel_firefox_base: >-
+      {{ (ansible_env.HOME ~ '/snap/firefox/common/.mozilla/firefox')
+         if ssh_intranet_tunnel_snap_firefox.stat.exists
+         else (ansible_env.HOME ~ '/.mozilla/firefox') }}
+    ssh_intranet_tunnel_firefox_icon: >-
+      {{ '/snap/firefox/current/default256.png'
+         if ssh_intranet_tunnel_snap_firefox.stat.exists else 'firefox' }}
+
+- name: Detect Firefox executable
+  ansible.builtin.stat:
+    path: "{{ ssh_intranet_tunnel_firefox_bin }}"
+  register: ssh_intranet_tunnel_firefox_bin_stat
+
+- name: Detect desktop entry tooling
+  ansible.builtin.shell:
+    cmd: "command -v desktop-file-validate; command -v update-desktop-database"
+  register: ssh_intranet_tunnel_desktop_tools
+  changed_when: false
+  failed_when: false
+
+- name: Display resolved paths
+  ansible.builtin.debug:
+    msg:
+      - "ssh client   : {{ ssh_intranet_tunnel_ssh_version.stderr | default('') }}"
+      - "intra-tun    : {{ ssh_intranet_tunnel_cli_dir }}/{{ ssh_intranet_tunnel_cli_name }}"
+      - "firefox base : {{ ssh_intranet_tunnel_firefox_base }}"
+      - "connections  : {{ ssh_intranet_tunnel_connections | map(attribute='id') | join(', ') if ssh_intranet_tunnel_connections | length > 0 else 'none' }}"
+
+- name: Configure each tunnel connection
+  ansible.builtin.include_tasks: connection.yml
+  loop: "{{ ssh_intranet_tunnel_connections }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: ssh_intranet_tunnel_connections | length > 0

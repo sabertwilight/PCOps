@@ -1,0 +1,37 @@
+---
+# SSH 内网隧道（SOCKS5 over SSH）—— 把任意一台 SSH 可达主机变成内网出口
+#
+# 设计要点：
+#   - 不修改对端 sshd、不需要 root、不需要额外软件（WireGuard 则需要内核模块+对端 peer）
+#   - 每条连接一个 SOCKS5 监听口，域名在**对端**解析（浏览器需远端 DNS）
+#   - 常驻由 systemd --user 单元负责；ad-hoc 由安装的 intra-tun 脚本负责
+#
+# 连接定义（列表，可多条，端点任意）：
+#  - id: oxygen                     # 单元名 ssh-intranet-<id>.service，profile 目录 intra-<ssh_host>
+#    ssh_host: Oxygen               # ~/.ssh/config 里的 Host，或任意 hostname/IP
+#    local_port: 11080              # 本机 SOCKS5 监听端口（127.0.0.1）
+#    systemd: true                  # 生成并启用 systemd --user 单元（常驻/自启）
+#    firefox_profile: true          # 生成独立 Firefox profile（免 GUI 配代理）
+#    domains: []                    # 空 => 全量 SOCKS；非空 => PAC 白名单模式
+#    identity_file: ""              # 可选：专用私钥（配合对端 authorized_keys permitopen）
+#    ssh_options: []                # 可选：额外的 -o 选项，如 ["ConnectTimeout=10"]
+#    autostart: true                # 可选：systemd 开机自启
+ssh_intranet_tunnel_connections: []
+
+# 是否把 intra-tun CLI 装到 ~/.local/bin
+ssh_intranet_tunnel_install_cli: true
+ssh_intranet_tunnel_cli_dir: "{{ ansible_env.HOME | default('~') }}/.local/bin"
+ssh_intranet_tunnel_cli_name: intra-tun
+
+ssh_intranet_tunnel_ssh: /usr/bin/ssh
+ssh_intranet_tunnel_server_alive: 30
+ssh_intranet_tunnel_server_alive_count_max: 3
+
+# systemd --user 环境；sshd 会话里通常没有 XDG_RUNTIME_DIR
+ssh_intranet_tunnel_xdg_runtime_dir: "/run/user/{{ ansible_facts['user_uid'] | default(ansible_env['UID'] | default('1000')) }}"
+
+# 启动后等待监听口就绪的秒数
+ssh_intranet_tunnel_wait_timeout: 20
+
+# Firefox 独立 profile 可附带生成桌面启动项（应用网格/Hyprland launcher 可搜索）
+ssh_intranet_tunnel_firefox_bin: /usr/bin/firefox

@@ -1,0 +1,11 @@
+[Unit]
+Description=SOCKS5 intranet tunnel via {{ item.ssh_host }} (127.0.0.1:{{ item.local_port }})
+After=network-online.target
+
+[Service]
+ExecStart={{ ssh_intranet_tunnel_ssh }} -N -D 127.0.0.1:{{ item.local_port }} -o ExitOnForwardFailure=yes -o ServerAliveInterval={{ ssh_intranet_tunnel_server_alive }} -o ServerAliveCountMax={{ ssh_intranet_tunnel_server_alive_count_max }}{% if item.identity_file | default('') %} -i {{ item.identity_file }} -o IdentitiesOnly=yes{% endif %}{% for opt in item.ssh_options | default([]) %} -o {{ opt }}{% endfor %} {{ item.ssh_host }}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

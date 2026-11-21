@@ -145,3 +145,20 @@ wireguard_client_connections:
     autoconnect: true
     force_reimport: false
 
+# ===========================================
+# SSH 内网隧道（SOCKS5 over SSH）
+# 与 wireguard-client 互补：L4 按连接 / 普通用户 / 对端零改动
+# 详见 roles/ssh-intranet-tunnel/README.md
+# ===========================================
+install_ssh_intranet_tunnel: true
+
+ssh_intranet_tunnel_connections:
+  - id: rpi5
+    ssh_host: rpi5                        # 已在 ~/.ssh/config 中定义（frp-mix.com:27143）
+    local_port: 11080
+    systemd: true
+    autostart: true
+    firefox_profile: true
+    domains: []                           # 空=全量 SOCKS；非空=PAC 白名单
+    verify_targets:
+      - "https://cube.ops-wxdc.vsat.cloud/"

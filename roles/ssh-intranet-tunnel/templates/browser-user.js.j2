@@ -1,0 +1,15 @@
+// {{ ansible_managed }}
+// 由 ssh-intranet-tunnel role 生成；独立 profile，不污染主力浏览器
+user_pref("network.proxy.type", {{ 2 if domains | length > 0 else 1 }});
+{% if domains | length > 0 %}
+user_pref("network.proxy.autoconfig_url", "file://{{ pac_path }}");
+{% else %}
+user_pref("network.proxy.socks", "127.0.0.1");
+user_pref("network.proxy.socks_port", {{ port }});
+user_pref("network.proxy.socks_version", 5);
+{% endif %}
+user_pref("network.proxy.no_proxies_on", "");
+// 关键：默认 false 时 Firefox 在本机解析域名，内网域名必然失败
+user_pref("network.proxy.socks_remote_dns", true);
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.aboutwelcome.enabled", false);

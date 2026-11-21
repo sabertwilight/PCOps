@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Firefox · 内网 {{ item.id }}
+Name[en]=Firefox · intranet {{ item.id }}
+Comment=SOCKS5 127.0.0.1:{{ item.local_port }} via {{ item.ssh_host }}
+Exec={{ ssh_intranet_tunnel_firefox_bin }} --new-instance --profile {{ profile_dir }} %u
+Icon={{ icon }}
+Terminal=false
+Categories=Network;WebBrowser;
+StartupNotify=true
+StartupWMClass=firefox_firefox

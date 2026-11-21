@@ -79,6 +79,11 @@
       when: install_feeluown | default(true)
       tags: [app, music]
 
+    # 内网访问（任意 SSH 端点 -> SOCKS5）
+    - role: ssh-intranet-tunnel
+      when: install_ssh_intranet_tunnel | default(false)
+      tags: [net, ssh-intranet]
+
     #    - role: wps
         #      tags: [app, office]
 

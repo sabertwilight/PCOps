@@ -1,0 +1,13 @@
+// {{ ansible_managed }}
+// 只有白名单域名走 SOCKS5，其余直连；白名单同时是"缩小意外暴露面"的客户端侧限制
+function FindProxyForURL(url, host) {
+  var P = "SOCKS5 127.0.0.1:{{ port }}; SOCKS 127.0.0.1:{{ port }}";
+{% for domain in domains %}
+{% if domain.startswith('*.') %}
+  if (dnsDomainIs(host, ".{{ domain[2:] }}")) return P;
+{% else %}
+  if (host === "{{ domain }}") return P;
+{% endif %}
+{% endfor %}
+  return "DIRECT";
+}

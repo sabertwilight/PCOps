@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+# intra-tun — 把任意一台 SSH 可达主机变成内网 SOCKS5 出口
+#
+#   intra-tun probe  HOST [host:port ...]   # 检查该主机是否满足前置依赖
+#   intra-tun start  HOST [PORT]            # 起 SOCKS5（默认 11080）
+ #   intra-tun stop   HOST|all
+#   intra-tun status
+#   intra-tun env    HOST                   # 打印 CLI 用的 export 行
+#   intra-tun firefox HOST                  # 独立 profile + 远端 DNS，GUI 免配置
+#   intra-tun chrome  HOST
+#   intra-tun pac    HOST DOMAIN...         # 生成域名白名单 PAC（PAC 模式）
+#   intra-tun allow  HOST host:port ...     # 生成专用受限密钥 + authorized_keys 行
+#
+# 退出码：0 成功，1 用法错误/前置不满足，2 隧道未起
+set -euo pipefail
+
+PROG=${0##*/}
+CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/intra-tun
+DEFAULT_PORT=11080
+mkdir -p "$CACHE"
+
+die() { printf '%s\n' "$*" >&2; exit "${2:-1}"; }
+note() { printf '%s\n' "$*"; }
+
+sanitize() { printf '%s' "$1" | tr '/@: ' '_____'; }
+
+ctl_path() { printf '%s/%s.sock' "$CACHE" "$(sanitize "$1")"; }
+state_path() { printf '%s/%s.state' "$CACHE" "$(sanitize "$1")"; }
+
+listening() { ss -lnt 2>/dev/null | awk 'NR>1 {print $4}' | grep -qx "127.0.0.1:$1"; }
+
+wait_listen() {
+    local port=$1 i
+    for i in $(seq 1 50); do
+        listening "$port" && return 0
+        sleep 0.2
+    done
+    return 1
+}
+
+port_of() {
+    local host=$1 f
+    f=$(state_path "$host")
+    [[ -f $f ]] || die "$host 未启动（先 '$PROG start $host'）" 2
+    awk -F'\t' '$1=="port" {print $2}' "$f"
+}
+
+usage() {
+    awk 'NR>1 { if ($0 ~ /^#/) { sub(/^# ?/, ""); print } else exit }' "$0"
+    exit 0
+}
+
+cmd_probe() {
+    local host=$1; shift
+    note "== 主机 $host =="
+    if ! timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=10 "$host" 'true' 2>/dev/null; then
+        die "SSH 登录失败：确认 Host 配置、公钥可用（BatchMode 下不允许交互输入）"
+    fi
+    note "  [ok] SSH 免交互登录"
+
+    local banner
+    banner=$(timeout 10 ssh -o BatchMode=yes -o ConnectTimeout=10 -W 127.0.0.1:22 "$host" </dev/null 2>/dev/null | head -1 || true)
+    if [[ -z $banner ]]; then
+        note "  [FAIL] 远端禁止 TCP 转发（AllowTcpForwarding/PermitOpen），本机 sshd 22 也探不到"
+    else
+        note "  [ok] 允许 TCP 转发（direct-tcpip 实测）—— 对端 banner: $banner"
+    fi
+
+    (( $# > 0 )) || { note "  (未指定目标，跳过可达性检查)"; return 0; }
+
+    ssh -o BatchMode=yes -o ConnectTimeout=10 "$host" bash -s -- "$@" <<'EOS'
+for t in "$@"; do
+    h=${t%:*}; p=${t##*:}
+    printf '  目标 %-45s ' "$t"
+    name=$(getent hosts "$h" 2>/dev/null | awk 'NR==1 {print "解析=" $1}' || true)
+    if timeout 3 bash -c "</dev/tcp/$h/$p" 2>/dev/null; then
+        printf '端口可达 %s\n' "$name"
+    else
+        printf '端口不可达 %s\n' "$name"
+    fi
+done
+EOS
+}
+
+cmd_start() {
+    local host=$1 port=${2:-$DEFAULT_PORT}
+    [[ -e $(ctl_path "$host") ]] && { timeout 5 ssh -S "$(ctl_path "$host")" -O exit "$host" >/dev/null 2>&1 || rm -f "$(ctl_path "$host")"; }
+    if listening "$port"; then
+        die "127.0.0.1:$port 已被占用；换端口：$PROG start $host $((port + 1))"
+    fi
+    ssh -f -N -M -S "$(ctl_path "$host")" -o BatchMode=yes -o ExitOnForwardFailure=yes \
+        -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -D "127.0.0.1:$port" "$host" || exit 2
+    wait_listen "$port" || die "隧道未起来（检查 $host 的 sshd 转发策略）" 2
+    printf 'port\t%s\nhost\t%s\n' "$port" "$host" > "$(state_path "$host")"
+    note "ok  SOCKS5 127.0.0.1:$port -> $host"
+    note "    浏览器 $PROG firefox $host   |   $PROG chrome $host"
+    note "    CLI    $PROG env $host  ->  export ALL_PROXY=socks5h://127.0.0.1:$port"
+}
+
+cmd_stop() {
+    local h sock f
+    for h in "$@"; do
+        sock=$(ctl_path "$h"); f=$(state_path "$h")
+        [[ -S $sock ]] && { timeout 5 ssh -S "$sock" -O exit "$h" >/dev/null 2>&1 || true; }
+        rm -f "$sock" "$f"
+        note "stopped $h"
+    done
+}
+
+cmd_status() {
+    local f host port
+    shopt -s nullglob
+    for f in "$CACHE"/*.state; do
+        host=$(awk -F'\t' '$1=="host" {print $2}' "$f")
+        port=$(awk -F'\t' '$1=="port" {print $2}' "$f")
+        if listening "$port"; then note "up    $host  127.0.0.1:$port"; else note "down  $host  127.0.0.1:$port (stale state)"; fi
+    done
+}
+
+cmd_env() {
+    local host=$1 port
+    port=$(port_of "$host")
+    note "export ALL_PROXY=socks5h://127.0.0.1:$port"
+    note "export NO_PROXY=localhost,127.0.0.1"
+}
+
+ff_base() {
+    if command -v snap >/dev/null 2>&1 && snap list firefox >/dev/null 2>&1; then
+        printf '%s' "$HOME/snap/firefox/common/.mozilla/firefox"
+    else
+        printf '%s' "$HOME/.mozilla/firefox"
+    fi
+}
+
+profile_dir() { printf '%s/intra-%s' "$(ff_base)" "$(sanitize "$1")"; }
+
+write_ff_prefs() { # host, port
+    local dir=$1 port=$2
+    mkdir -p "$dir"
+    cat > "$dir/user.js" <<EOF
+user_pref("network.proxy.type", 1);
+user_pref("network.proxy.socks", "127.0.0.1");
+user_pref("network.proxy.socks_port", $port);
+user_pref("network.proxy.socks_version", 5);
+user_pref("network.proxy.socks_remote_dns", true);
+user_pref("network.proxy.no_proxies_on", "");
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.aboutwelcome.enabled", false);
+EOF
+}
+
+cmd_firefox() {
+    local host=$1 port dir
+    port=$(port_of "$host")
+    dir=$(profile_dir "$host")
+    write_ff_prefs "$dir" "$port"
+    note "profile: $dir" >&2
+    exec firefox --profile "$dir"
+}
+
+cmd_chrome() {
+    local host=$1 port
+    port=$(port_of "$host")
+    exec google-chrome --user-data-dir "$HOME/.chrome-intra-$(sanitize "$host")" \
+        --proxy-server "socks5://127.0.0.1:$port"
+}
+
+cmd_pac() { # host, domain[:port]...  (支持 *.suffix 后缀匹配)
+    local host=$1; shift
+    (( $# > 0 )) || die "用法：$PROG pac HOST DOMAIN..."
+    local port dir file list="" e base hostonly
+    port=$(port_of "$host")
+    dir=$(profile_dir "$host")
+    mkdir -p "$dir"
+    file="$dir/intra.pac"
+    for e in "$@"; do
+        base=${e%:*}
+        if [[ $base == \*.* ]]; then
+            hostonly=${base#\*.}
+            list+=$(printf '  if (dnsDomainIs(host, ".%s")) return P;' "$hostonly")$'\n' 
+        else
+            list+=$(printf '  if (host === "%s") return P;' "$base")$'\n' 
+        fi
+    done
+    cat > "$file" <<EOF
+// intra-tun: 只有列出的域名走 $host 的 SOCKS5
+function FindProxyForURL(url, host) {
+  var P = "SOCKS5 127.0.0.1:$port; SOCKS 127.0.0.1:$port";
+$list  return "DIRECT";
+}
+EOF
+    write_ff_prefs "$dir" "$port"
+    cat >> "$dir/user.js" <<EOF
+user_pref("network.proxy.type", 2);
+user_pref("network.proxy.autoconfig_url", "file://$(realpath "$file")");
+EOF
+    note "PAC: $file"
+    note "白名单 $(($#)) 条；用 '$PROG firefox $host' 启动即生效"
+}
+
+cmd_allow() { # host, host:port...
+    local host=$1; shift
+    (( $# > 0 )) || die "用法：$PROG allow HOST host:port ..."
+    local key line="" t
+    key="$HOME/.ssh/id_intra_$(sanitize "$host")"
+    [[ -f $key ]] || ssh-keygen -t ed25519 -N '' -C "intra-tun $host" -f "$key" >/dev/null
+    for t in "$@"; do
+        [[ $t == *\** ]] && note "# 警告：$t 含后缀通配，sshd 不支持（只认整串 *，实测被拒）" >&2
+        line+="${line:+,}permitopen=\"$t\""
+    done
+    line+=",no-pty,no-agent-forwarding,no-X11-forwarding"
+    note "# 注意：不要加 restrict —— 实测 restrict 会连 permitopen 白名单一起禁掉"
+    note "# 1) 把这行追加到 $host 的用户 ~/.ssh/authorized_keys（只限制这把密钥）"
+    printf '%s %s\n\n' "$line" "$(cut -d' ' -f1,2 "$key.pub")"
+    note "# 2) 本机 ~/.ssh/config 加（注意 Host 名与现有配置不冲突）"
+    cat <<EOF
+
+Host ${host}-restricted
+    HostName $(ssh -G "$host" 2>/dev/null | awk '$1=="hostname"{print $2}')
+    Port $(ssh -G "$host" 2>/dev/null | awk '$1=="port"{print $2}')
+    User $(ssh -G "$host" 2>/dev/null | awk '$1=="user"{print $2}')
+    IdentityFile $key
+    IdentitiesOnly yes
+    DynamicForward 127.0.0.1:11081
+EOF
+}
+
+(( $# >= 1 )) || usage
+cmd=$1; shift
+case $cmd in
+    probe)   cmd_probe "$@" ;;
+    start)   cmd_start "$@" ;;
+    stop)    [[ ${1:-} == all ]] && { shopt -s nullglob; set -- $(for f in "$CACHE"/*.state; do awk -F'\t' '$1=="host"{print $2}' "$f"; done); }; cmd_stop "$@" ;;
+    status)  cmd_status ;;
+    env)     cmd_env "$@" ;;
+    firefox|chrome) "cmd_$cmd" "$@" ;;
+    pac|allow) "cmd_$cmd" "$@" ;;
+    -h|--help|help) usage ;;
+    *) usage ;;
+esac
