@@ -1,0 +1,31 @@
+---
+# WireGuard 客户端配置
+# 私钥若留空则自动生成并保存到 ~/.local/share/wireguard/
+
+wireguard_client_enabled: true
+
+wireguard_client_key_dir: "{{ ansible_env.HOME }}/.local/share/wireguard"
+
+wireguard_client_connections: []
+# 支持多个 WG 接口，按列表追加即可：
+#  - id: wg0
+#    interface_address: 10.8.0.12/32
+#    mtu: 1280
+#    private_key: ""                       # 留空自动生成
+#    peer_public_key: "YOUR_SERVER_PUBLIC_KEY"
+#    peer_endpoint: "your.server.com:58120"
+#    peer_allowed_ips: "10.8.0.1/32, 172.16.32.0/24"
+#    peer_persistent_keepalive: 25
+#    dns: "172.16.32.11"
+#    dns_search: "ops-wxdc.vsat.cloud,vsat.wxdc"
+#    autoconnect: true
+#    force_reimport: false
+#
+#  - id: wg1
+#    interface_address: 10.9.0.5/32
+#    peer_public_key: "ANOTHER_SERVER_PUBLIC_KEY"
+#    peer_endpoint: "another.server.com:51820"
+#    peer_allowed_ips: "0.0.0.0/0"
+#    dns: "1.1.1.1"
+#    dns_search: "example.com"
+#    autoconnect: false

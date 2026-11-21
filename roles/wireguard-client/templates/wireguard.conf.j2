@@ -1,0 +1,14 @@
+[Interface]
+PrivateKey = {{ wg_private_key }}
+Address = {{ item.interface_address }}
+{% if item.mtu is defined %}
+MTU = {{ item.mtu }}
+{% endif %}
+
+[Peer]
+PublicKey = {{ item.peer_public_key }}
+Endpoint = {{ item.peer_endpoint }}
+AllowedIPs = {{ item.peer_allowed_ips }}
+{% if item.peer_persistent_keepalive is defined %}
+PersistentKeepalive = {{ item.peer_persistent_keepalive }}
+{% endif %}

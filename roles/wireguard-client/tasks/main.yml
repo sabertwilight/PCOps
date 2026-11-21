@@ -1,0 +1,124 @@
+---
+- name: Install wireguard-tools
+  ansible.builtin.apt:
+    name: wireguard-tools
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Ensure key storage directory exists
+  ansible.builtin.file:
+    path: "{{ wireguard_client_key_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Process WireGuard connections
+  block:
+    - name: Check if private key exists for {{ item.id }}
+      ansible.builtin.stat:
+        path: "{{ wireguard_client_key_dir }}/{{ item.id }}-private.key"
+      register: privkey_stat
+
+    - name: Generate keypair for {{ item.id }}
+      ansible.builtin.shell: |
+        wg genkey | tee "{{ wireguard_client_key_dir }}/{{ item.id }}-private.key" | wg pubkey > "{{ wireguard_client_key_dir }}/{{ item.id }}-public.key"
+      args:
+        creates: "{{ wireguard_client_key_dir }}/{{ item.id }}-private.key"
+      when: not privkey_stat.stat.exists and not item.private_key | default('')
+
+    - name: Save provided private key for {{ item.id }}
+      ansible.builtin.copy:
+        content: "{{ item.private_key }}"
+        dest: "{{ wireguard_client_key_dir }}/{{ item.id }}-private.key"
+        mode: "0600"
+      when: item.private_key | default('') | length > 0
+
+    - name: Generate public key from provided private key for {{ item.id }}
+      ansible.builtin.shell: |
+        wg pubkey < "{{ wireguard_client_key_dir }}/{{ item.id }}-private.key" > "{{ wireguard_client_key_dir }}/{{ item.id }}-public.key"
+      when: item.private_key | default('') | length > 0
+
+    - name: Read private key for {{ item.id }}
+      ansible.builtin.slurp:
+        src: "{{ wireguard_client_key_dir }}/{{ item.id }}-private.key"
+      register: slurp_privkey
+      no_log: true
+
+    - name: Set private key fact for {{ item.id }}
+      ansible.builtin.set_fact:
+        wg_private_key: "{{ slurp_privkey.content | b64decode | trim }}"
+      no_log: true
+
+    - name: Read public key for {{ item.id }}
+      ansible.builtin.slurp:
+        src: "{{ wireguard_client_key_dir }}/{{ item.id }}-public.key"
+      register: slurp_pubkey
+
+    - name: Generate temporary WireGuard config for {{ item.id }}
+      ansible.builtin.template:
+        src: wireguard.conf.j2
+        dest: "/tmp/{{ item.id }}.conf"
+        mode: "0600"
+      no_log: true
+
+    - name: Check if NetworkManager connection exists for {{ item.id }}
+      ansible.builtin.shell: |
+        nmcli -t -f NAME connection show | grep -q "^{{ item.id }}$"
+      register: nm_conn_check
+      failed_when: false
+      changed_when: false
+
+    - name: Remove stale NetworkManager connection for {{ item.id }}
+      ansible.builtin.command:
+        cmd: nmcli connection delete {{ item.id }}
+      when: nm_conn_check.rc == 0 and (item.force_reimport | default(false))
+      changed_when: true
+
+    - name: Import WireGuard config into NetworkManager for {{ item.id }}
+      ansible.builtin.command:
+        cmd: nmcli connection import type wireguard file /tmp/{{ item.id }}.conf
+      when: nm_conn_check.rc != 0 or (item.force_reimport | default(false))
+      changed_when: true
+
+    - name: Configure DNS for {{ item.id }}
+      ansible.builtin.command:
+        cmd: >
+          nmcli connection modify {{ item.id }}
+          ipv4.dns "{{ item.dns }}"
+          ipv4.dns-search "{{ item.dns_search }}"
+          ipv4.ignore-auto-dns yes
+      when: item.dns is defined and item.dns_search is defined
+      changed_when: true
+
+    - name: Set autoconnect for {{ item.id }}
+      ansible.builtin.command:
+        cmd: nmcli connection modify {{ item.id }} connection.autoconnect {{ item.autoconnect | default(true) | ternary('yes', 'no') }}
+      changed_when: true
+
+    - name: Show generated public key for {{ item.id }}
+      ansible.builtin.debug:
+        msg: |
+          🔑 WireGuard public key for "{{ item.id }}" (update server Peer config):
+             {{ slurp_pubkey.content | b64decode | trim }}
+
+    - name: Clean up temporary config for {{ item.id }}
+      ansible.builtin.file:
+        path: "/tmp/{{ item.id }}.conf"
+        state: absent
+      no_log: true
+
+  loop: "{{ wireguard_client_connections }}"
+  when: wireguard_client_connections | length > 0
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: WireGuard client summary
+  ansible.builtin.debug:
+    msg: |
+      WireGuard client configuration complete.
+
+      Manage connections with:
+        nmcli connection up <id>      # 启动
+        nmcli connection down <id>    # 关闭
+        nmcli connection show <id>    # 查看状态
