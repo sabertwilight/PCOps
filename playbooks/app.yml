@@ -66,6 +66,9 @@
     - role: obsidian
       tags: [app, notes]
 
+    - role: filezilla
+      tags: [app, filezilla]
+
     - role: drawio
       tags: [app, diagram]
 

@@ -1,0 +1,21 @@
+---
+- name: Verify
+  hosts: all
+  tasks:
+    - name: Check filezilla package is installed
+      ansible.builtin.command: dpkg-query -W -f='${Status} ${Version}' filezilla
+      register: filezilla_version
+      changed_when: false
+      failed_when: false
+
+    - name: Assert filezilla installed
+      ansible.builtin.assert:
+        that:
+          - filezilla_version.rc == 0
+          - "'install ok installed' in filezilla_version.stdout"
+        fail_msg: "filezilla is not installed (dpkg: {{ filezilla_version.stdout | trim | default('not found') }})"
+        success_msg: "filezilla installed: {{ filezilla_version.stdout | trim }}"
+
+    - name: Display filezilla package info
+      ansible.builtin.debug:
+        msg: "filezilla installed: {{ filezilla_version.stdout | trim }}"

@@ -1,0 +1,30 @@
+---
+# filezilla tasks
+# 安装 FileZilla FTP 客户端 (Ubuntu: apt universe / macOS: brew cask)
+
+- name: Install FileZilla packages (Linux)
+  ansible.builtin.apt:
+    name: "{{ filezilla_packages }}"
+    state: present
+  become: true
+  when: ansible_system == "Linux"
+
+- name: Install FileZilla (macOS)
+  community.general.homebrew_cask:
+    name: filezilla
+    state: present
+  when: ansible_system == "Darwin"
+
+- name: Verify FileZilla package state (Linux)
+  ansible.builtin.command: dpkg-query -W -f='${Status} ${Version}' filezilla
+  register: filezilla_verify
+  changed_when: false
+  failed_when: >-
+    filezilla_verify.rc != 0 or
+    'install ok installed' not in filezilla_verify.stdout
+  when: ansible_system == "Linux"
+
+- name: Display FileZilla package info
+  ansible.builtin.debug:
+    msg: "FileZilla installed: {{ filezilla_verify.stdout | trim }}"
+  when: ansible_system == "Linux"

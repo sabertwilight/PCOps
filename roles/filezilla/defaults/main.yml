@@ -1,0 +1,5 @@
+---
+# filezilla role defaults
+# apt 包名列表，便于扩展（如 filezilla-common 由 apt 自动处理）
+filezilla_packages:
+  - filezilla
