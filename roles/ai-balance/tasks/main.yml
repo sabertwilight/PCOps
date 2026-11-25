@@ -48,7 +48,24 @@
     - __init__.py
     - kimi.py
     - minimax.py
+    - opencode.py
     - zhipu.py
+
+- name: Create platforms-available directory (disabled platforms)
+  file:
+    path: "{{ ansible_user_dir }}/.local/share/ai-balance/platforms-available"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user_id }}"
+
+- name: Copy disabled platform scripts
+  copy:
+    src: "assets/ai-balance/platforms-available/{{ item }}"
+    dest: "{{ ansible_user_dir }}/.local/share/ai-balance/platforms-available/{{ item }}"
+    mode: '0644'
+    owner: "{{ ansible_user_id }}"
+  loop:
+    - volcengine.py
 
 - name: Create Python venv
   shell: python3 -m venv "{{ ansible_user_dir }}/.local/share/ai-balance/venv"

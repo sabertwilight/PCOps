@@ -18,6 +18,7 @@ PLATFORM_COLORS = {
     "MiniMax-MCP": C_MAGENTA,
     "智谱": C_GREEN,
     "智谱-MCP": C_GREEN,
+    "OpenCode-Go": C_YELLOW,
 }
 
 
