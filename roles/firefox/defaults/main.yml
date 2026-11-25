@@ -1,0 +1,14 @@
+---
+# firefox role defaults
+# Whether to remove the system's snap firefox (no-op if already absent)
+firefox_remove_snap: true
+
+# Target version. Default "latest" follows the highest available in the Mozilla repo;
+# alternatively pin a specific build string, e.g. "151.0.2~build1"
+firefox_version: "latest"
+
+# Proxy configuration (mirrors roles/yq defaults; useful for restricted networks)
+configure_proxy: false
+proxy_env:
+  http_proxy: "http://127.0.0.1:7890"
+  https_proxy: "http://127.0.0.1:7890"

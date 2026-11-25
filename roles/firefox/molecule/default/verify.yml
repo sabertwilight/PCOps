@@ -1,0 +1,68 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check firefox binary
+      stat:
+        path: /usr/bin/firefox
+      register: firefox_binary
+
+    - name: Assert firefox binary exists
+      assert:
+        that:
+          - firefox_binary.stat.exists
+          - firefox_binary.stat.isreg or firefox_binary.stat.islnk
+        fail_msg: "firefox binary not found at /usr/bin/firefox"
+        success_msg: "firefox binary present"
+
+    - name: Verify firefox version
+      command: firefox --version
+      register: firefox_version_output
+      changed_when: false
+      failed_when: false
+
+    - name: Assert firefox version
+      assert:
+        that:
+          - "'Mozilla Firefox' in firefox_version_output.stdout"
+        fail_msg: "firefox version check failed"
+        success_msg: "firefox reports version correctly"
+
+    - name: Check snap firefox is absent
+      command: snap list firefox
+      register: firefox_snap
+      changed_when: false
+      failed_when: false
+
+    - name: Assert snap firefox is removed
+      assert:
+        that:
+          - firefox_snap.rc != 0
+        fail_msg: "snap firefox is still installed"
+        success_msg: "snap firefox is gone"
+
+    - name: Read apt source list
+      slurp:
+        src: /etc/apt/sources.list.d/mozilla.list
+      register: mozilla_source
+
+    - name: Assert Mozilla source is configured
+      assert:
+        that:
+          - "'packages.mozilla.org' in (mozilla_source.content | b64decode)"
+        fail_msg: "Mozilla APT source not configured"
+        success_msg: "Mozilla APT source present"
+
+    - name: Read apt preferences
+      slurp:
+        src: /etc/apt/preferences.d/mozilla
+      register: mozilla_pin
+
+    - name: Assert Mozilla pin is set
+      assert:
+        that:
+          - "'packages.mozilla.org' in (mozilla_pin.content | b64decode)"
+          - "'Pin-Priority: 1000' in (mozilla_pin.content | b64decode)"
+        fail_msg: "Mozilla apt pinning not configured"
+        success_msg: "Mozilla apt pinning present"

@@ -1,0 +1,78 @@
+---
+# firefox role tasks
+# Removes snap firefox, adds the Mozilla APT repository, pins it above
+# Ubuntu's archive, purges the transitional snap deb, and installs the
+# upstream Mozilla firefox package.
+
+- name: Remove firefox snap if installed
+  snap:
+    name: firefox
+    state: absent
+  become: true
+  when: firefox_remove_snap
+
+- name: Ensure apt keyring directory exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Download Mozilla APT repository signing key
+  get_url:
+    url: https://packages.mozilla.org/apt/repo-signing-key.gpg
+    dest: /etc/apt/keyrings/packages.mozilla.org.asc
+    mode: '0644'
+  become: true
+  environment: "{{ proxy_env }}"
+
+- name: Add Mozilla APT repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main"
+    filename: mozilla
+    state: present
+    update_cache: true
+  become: true
+
+- name: Pin Mozilla APT repository with high priority
+  copy:
+    dest: /etc/apt/preferences.d/mozilla
+    content: |
+      Package: *
+      Pin: origin packages.mozilla.org
+      Pin-Priority: 1000
+    mode: '0644'
+  become: true
+
+- name: Check if Ubuntu's transitional firefox deb is installed
+  command: dpkg-query -W -f='${Status} ${Version}\n' firefox
+  register: firefox_dpkg_check
+  changed_when: false
+  failed_when: false
+
+- name: Purge Ubuntu's transitional firefox deb if transitional is present
+  apt:
+    name: firefox
+    state: absent
+    purge: true
+  become: true
+  when:
+    - firefox_dpkg_check.rc == 0
+    - "'1:1snap1' in firefox_dpkg_check.stdout"
+
+- name: Install firefox
+  apt:
+    name: "{{ 'firefox' if firefox_version == 'latest' else 'firefox=' + firefox_version }}"
+    state: present
+    update_cache: true
+  become: true
+
+- name: Capture installed firefox version
+  command: /usr/bin/firefox --version
+  register: firefox_version_cli
+  changed_when: false
+  failed_when: false
+
+- name: Display installed firefox info
+  debug:
+    msg: "firefox installed: {{ firefox_version_cli.stdout }} from Mozilla repo"

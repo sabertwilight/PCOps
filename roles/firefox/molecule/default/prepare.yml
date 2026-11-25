@@ -1,0 +1,26 @@
+---
+# Prepare the molecule test container. The base image
+# (geerlingguy/docker-ubuntu2404-ansible:latest) is a minimal Ubuntu 24.04
+# without snapd. The role's first task is `snap: name=firefox state=absent`,
+# and the Ansible `snap` module requires the `snap` binary on PATH
+# (module.get_bin_path('snap', required=True)). On a real Ubuntu 24.04 host
+# snapd is always present (per the role's spec), but the stripped-down
+# molecule base image omits it. Install snapd here so the snap module can
+# find its binary. The snap daemon itself is not started (no systemd in the
+# container); only the `snap` CLI is needed by Ansible. No extra system
+# packages are needed for the rest of the role.
+- name: Prepare
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Refresh apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install snapd so the snap module binary is available
+      apt:
+        name: snapd
+        state: present
+        update_cache: false
+      become: true

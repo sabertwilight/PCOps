@@ -32,6 +32,9 @@
     - role: microsoft-edge
       tags: [dev, app]
 
+    - role: firefox
+      tags: [app, firefox]
+
     # 开发工具
     - role: vscode
       tags: [dev, app]
