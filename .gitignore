@@ -66,6 +66,7 @@ Thumbs.db
 my-config.yml
 *-config.yml
 !inventory/group_vars/all.yml
+.envrc
 
 # Test artifacts
 test-results/
