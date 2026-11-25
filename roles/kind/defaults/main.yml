@@ -1,0 +1,7 @@
+---
+# kind role defaults
+kind_version: "v0.33.0"
+cache_dir: /tmp/kind-cache
+proxy_env:
+  http_proxy: "http://127.0.0.1:7890"
+  https_proxy: "http://127.0.0.1:7890"

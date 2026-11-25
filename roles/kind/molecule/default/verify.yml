@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check kind binary exists
+      stat:
+        path: /usr/local/bin/kind
+      register: kind_binary
+
+    - name: Assert kind is installed
+      assert:
+        that:
+          - kind_binary.stat.exists
+          - kind_binary.stat.mode == '0755'
+          - kind_binary.stat.isreg
+        fail_msg: "kind binary not found at /usr/local/bin/kind"
+        success_msg: "kind binary is correctly installed"
+
+    - name: Verify kind runs
+      command: /usr/local/bin/kind version
+      register: kind_version_output
+      changed_when: false
+
+    - name: Assert kind version output
+      assert:
+        that:
+          - "'kind v' in kind_version_output.stdout"
+        fail_msg: "kind version check failed"
+        success_msg: "kind is installed correctly"

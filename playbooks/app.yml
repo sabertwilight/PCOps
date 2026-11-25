@@ -55,6 +55,9 @@
     - role: kubectl
       tags: [util, app, kubectl]
 
+    - role: kind
+      tags: [util, app, kind]
+
     - role: fastfetch
       tags: [util, app, fastfetch]
 
