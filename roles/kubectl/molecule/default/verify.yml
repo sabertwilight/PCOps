@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check kubectl binary exists
+      stat:
+        path: /usr/local/bin/kubectl
+      register: kubectl_binary
+
+    - name: Assert kubectl is installed
+      assert:
+        that:
+          - kubectl_binary.stat.exists
+          - kubectl_binary.stat.mode == '0755'
+          - kubectl_binary.stat.isreg
+        fail_msg: "kubectl binary not found at /usr/local/bin/kubectl"
+        success_msg: "kubectl binary is correctly installed"
+
+    - name: Verify kubectl runs
+      command: /usr/local/bin/kubectl version --client
+      register: kubectl_version_output
+      changed_when: false
+
+    - name: Assert kubectl client version output
+      assert:
+        that:
+          - "'Client Version' in kubectl_version_output.stdout"
+        fail_msg: "kubectl version check failed"
+        success_msg: "kubectl is installed correctly"

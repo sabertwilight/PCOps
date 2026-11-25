@@ -52,6 +52,9 @@
     - role: yq
       tags: [util, app]
 
+    - role: kubectl
+      tags: [util, app, kubectl]
+
     - role: fastfetch
       tags: [util, app, fastfetch]
 
